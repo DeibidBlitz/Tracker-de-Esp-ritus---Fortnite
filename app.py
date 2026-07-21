@@ -21,7 +21,7 @@ MAPA_NOMBRES = {
     "18-LOS_SIETE-03_Los_Siete_Golosina": "Los Siete Golosina",
     "18-LOS_SIETE-04_Los_Siete_Galáctico": "Los Siete Galáctico",
     "18-LOS_SIETE-05_Los_Siete_Holo": "Los Siete Holo",
-    "20-VINI_JR-01_Vini_Jr_Normal: Vini Jr"
+    "20-VINI_JR-01_Vini_Jr_Normal: Vini Jr",
 }
 
 st.set_page_config(page_title="Tracker de Espíritus", layout="wide")
