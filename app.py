@@ -109,7 +109,3 @@ if os.path.exists(IMG_FOLDER):
         st.info("Selecciona algunos espíritus para poder descargar la imagen.")
 else:
     st.warning("Aún no he encontrado la carpeta de imágenes.")
-    else:
-        st.info("Selecciona algunos espíritus para poder descargar la imagen.")
-else:
-    st.warning("Aún no he encontrado la carpeta de imágenes.")
