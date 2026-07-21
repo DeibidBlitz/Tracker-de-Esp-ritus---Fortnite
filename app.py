@@ -8,7 +8,7 @@ IMG_FOLDER = "imagenes"
 
 # --- DICCIONARIO DE NOMBRES ---
 MAPA_NOMBRES = {
-    "11-PUNTO_CERO-01_Punto-Cero_Normal": "Punto Cero Normal",
+    "11-PUNTO_CERO-01_Punto-Cero_Normal": "Punto Cero",
     "11-PUNTO_CERO-02_Punto-Cero_Dorado": "Punto Cero Dorado",
     "11-PUNTO_CERO-03_Punto-Cero_Golosina": "Punto Cero Golosina",
     "11-PUNTO_CERO-04_Punto-Cero_Galáctico": "Punto Cero Galáctico",
@@ -105,6 +105,10 @@ if os.path.exists(IMG_FOLDER):
             file_name="catalogo_espiritus.png",
             mime="image/png"
         )
+    else:
+        st.info("Selecciona algunos espíritus para poder descargar la imagen.")
+else:
+    st.warning("Aún no he encontrado la carpeta de imágenes.")
     else:
         st.info("Selecciona algunos espíritus para poder descargar la imagen.")
 else:
