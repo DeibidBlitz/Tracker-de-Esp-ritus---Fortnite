@@ -78,8 +78,9 @@ if os.path.exists(IMG_FOLDER):
         for i, archivo in enumerate(lista_grupo):
             nombre_base = os.path.splitext(archivo)[0]
             
-            # Nombre limpio para la web
-            nombre_mostrado = MAPA_NOMBRES.get(nombre_base, nombre_base.split('_', 1)[-1].replace("-", " ").replace("_", " ").title())
+            # Nombre limpio para la web (remueve "Normal" si viene por defecto o del diccionario)
+            nombre_crudo = MAPA_NOMBRES.get(nombre_base, nombre_base.split('_', 1)[-1].replace("-", " ").replace("_", " ").title())
+            nombre_mostrado = nombre_crudo.replace("Normal", "").strip()
             
             with cols[i % 5]:
                 st.image(f"{IMG_FOLDER}/{archivo}", width=100)
