@@ -30,17 +30,20 @@ st.title("Tracker de Espíritus - Fortnite")
 if 'seleccionados' not in st.session_state:
     st.session_state.seleccionados = set()
 
-# --- GENERADOR DE IMAGEN (Minimalista) ---
-def generar_imagen_coleccion(todos_los_archivos, seleccionados):
+def obtener_titulo_categoria(nombre_archivo):
+    return nombre_archivo.split('-')[1].replace("_", " ")
+
+# --- GENERADOR DE IMAGEN (Sincronizado con el orden visual por categorías) ---
+def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
     columnas = 10
     ancho_celda = 90
     alto_celda = 110
-    filas = (len(todos_los_archivos) // columnas) + 1
+    filas = (len(lista_ordenada_archivos) // columnas) + 1
     
     img_final = Image.new('RGB', (columnas * ancho_celda, filas * alto_celda), color=(20, 20, 20))
     d = ImageDraw.Draw(img_final)
     
-    for i, archivo in enumerate(todos_los_archivos):
+    for i, archivo in enumerate(lista_ordenada_archivos):
         ruta = os.path.join(IMG_FOLDER, archivo)
         img_espiritu = Image.open(ruta).resize((70, 70))
         
@@ -51,7 +54,6 @@ def generar_imagen_coleccion(todos_los_archivos, seleccionados):
         
         nombre_base = os.path.splitext(archivo)[0]
         
-        # Estado basado en ID único
         is_checked = nombre_base in seleccionados
         color_cuadro = (0, 255, 0) if is_checked else (100, 100, 100)
         
@@ -63,31 +65,54 @@ def generar_imagen_coleccion(todos_los_archivos, seleccionados):
     img_final.save(buf, format="PNG")
     return buf.getvalue()
 
-def obtener_titulo_categoria(nombre_archivo):
-    return nombre_archivo.split('-')[1].replace("_", " ")
-
 # --- LÓGICA PRINCIPAL ---
 if os.path.exists(IMG_FOLDER):
-    archivos = sorted([f for f in os.listdir(IMG_FOLDER) if f.endswith('.png')])
+    archivos_crudos = sorted([f for f in os.listdir(IMG_FOLDER) if f.endswith('.png')])
     
-    for categoria, grupo in groupby(archivos, key=obtener_titulo_categoria):
-        st.subheader(categoria.title())
+    # Reconstruimos la misma lista ordenada exactamente como se muestra en pantalla por categoría
+    archivos_ordenados = []
+    for categoria, grupo in groupby(archivos_crudos, key=obtener_titulo_categoria):
+        archivos_ordenados.extend(list(grupo))
+    
+    for categoria, grupo in groupby(archivos_crudos, key=obtener_titulo_categoria):
         lista_grupo = list(grupo)
+        ids_grupo = [os.path.splitext(f)[0] for f in lista_grupo]
+        
+        num_seleccionados = sum(1 for id_esp in ids_grupo if id_esp in st.session_state.seleccionados)
+        todos_seleccionados = (num_seleccionados == len(ids_grupo))
+        
+        # --- Cabecera de Categoría con Checkbox sincronizado ---
+        col_tit, col_chk = st.columns([2, 10])
+        with col_tit:
+            def toggle_categoria(ids=ids_grupo):
+                current_all = all(id_esp in st.session_state.seleccionados for id_esp in ids)
+                if current_all:
+                    for id_esp in ids:
+                        st.session_state.seleccionados.discard(id_esp)
+                else:
+                    for id_esp in ids:
+                        st.session_state.seleccionados.add(id_esp)
+
+            st.checkbox(
+                f"**{categoria.title()}**", 
+                value=todos_seleccionados, 
+                key=f"cat_chk_{categoria}",
+                on_change=toggle_categoria
+            )
+        
+        # --- CUADRÍCULA DE ESPÍRITUS ---
         cols = st.columns(5)
         
         for i, archivo in enumerate(lista_grupo):
             nombre_base = os.path.splitext(archivo)[0]
             
-            # Nombre limpio para la web (remueve "Normal" si viene por defecto o del diccionario)
             nombre_crudo = MAPA_NOMBRES.get(nombre_base, nombre_base.split('_', 1)[-1].replace("-", " ").replace("_", " ").title())
             nombre_mostrado = nombre_crudo.replace("Normal", "").strip()
             
             with cols[i % 5]:
                 st.image(f"{IMG_FOLDER}/{archivo}", width=100)
                 
-                # Identificador único para el estado
                 is_checked = nombre_base in st.session_state.seleccionados
-                
                 etiqueta = f"{'✅' if is_checked else '⬜'} {nombre_mostrado}"
                 
                 if st.button(etiqueta, key=f"btn_{nombre_base}", use_container_width=True, type="primary" if is_checked else "secondary"):
@@ -99,7 +124,8 @@ if os.path.exists(IMG_FOLDER):
 
     st.divider()
     if st.session_state.seleccionados:
-        img_bytes = generar_imagen_coleccion(archivos, st.session_state.seleccionados)
+        # Pasamos la lista que respeta el orden visual de las categorías
+        img_bytes = generar_imagen_coleccion(archivos_ordenados, st.session_state.seleccionados)
         st.download_button(
             label="💾 Descargar Catálogo Visual",
             data=img_bytes,
