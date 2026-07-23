@@ -66,31 +66,33 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
         
     img_final = Image.alpha_composite(img_final, capa_ui)
     
+    # Tamaños de fuente ajustados para mayor presencia visual
     try:
         if os.path.exists(FUENTE_CUSTOM_PATH):
-            font_titulo = ImageFont.truetype(FUENTE_CUSTOM_PATH, 22)
-            font_contador = ImageFont.truetype(FUENTE_CUSTOM_PATH, 20)
+            font_titulo = ImageFont.truetype(FUENTE_CUSTOM_PATH, 30)
+            font_contador = ImageFont.truetype(FUENTE_CUSTOM_PATH, 26)
         else:
-            font_titulo = ImageFont.truetype("impact.ttf", 22)
-            font_contador = ImageFont.truetype("impact.ttf", 20)
+            font_titulo = ImageFont.truetype("impact.ttf", 30)
+            font_contador = ImageFont.truetype("impact.ttf", 26)
     except:
         font_titulo = ImageFont.load_default()
         font_contador = ImageFont.load_default()
         
     d = ImageDraw.Draw(img_final)
     
-    texto_titulo = "MI COLECCIÓN DE ESPÍRITUS"
+    # Texto sin acentos para evitar errores de renderizado en Linux/Cloud
+    texto_titulo = "MI COLECCION DE ESPIRITUS"
     total_items = len(lista_ordenada_archivos)
     obtenidos = sum(1 for f in lista_ordenada_archivos if os.path.splitext(f)[0] in seleccionados)
     texto_progreso = f"{obtenidos}/{total_items}"
     
-    d.text((padding_lateral + 17, 32), texto_titulo, fill=(0, 0, 0, 255), font=font_titulo)
-    d.text((ancho_total - padding_lateral - 78, 34), texto_progreso, fill=(0, 0, 0, 255), font=font_contador)
+    # Posición vertical ajustada (y=24) para que el texto grande luzca bien centrado en el banner de 50px de alto
+    d.text((padding_lateral + 17, 26), texto_titulo, fill=(0, 0, 0, 255), font=font_titulo)
+    d.text((ancho_total - padding_lateral - 98, 28), texto_progreso, fill=(0, 0, 0, 255), font=font_contador)
     
-    d.text((padding_lateral + 15, 30), texto_titulo, fill=(255, 255, 255), font=font_titulo)
-    d.text((ancho_total - padding_lateral - 80, 32), texto_progreso, fill=(0, 255, 120), font=font_contador)
+    d.text((padding_lateral + 15, 24), texto_titulo, fill=(255, 255, 255), font=font_titulo)
+    d.text((ancho_total - padding_lateral - 100, 26), texto_progreso, fill=(0, 255, 120), font=font_contador)
     
-    # Cargar el icono del check si existe para pegarlo en los elementos seleccionados
     img_check = None
     if os.path.exists(CHECK_ICON_PATH):
         img_check = Image.open(CHECK_ICON_PATH).convert('RGBA').resize((26, 26))
@@ -107,15 +109,12 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
         nombre_base = os.path.splitext(archivo)[0]
         is_checked = nombre_base in seleccionados
         
-        # Casilla base gris tenue
         d.rectangle([x + 22, y + 75, x + 48, y + 95], outline=(120, 120, 120), width=1)
         
         if is_checked:
             if img_check:
-                # Pegar la imagen del check exactamente en la zona de la casilla
                 img_final.paste(img_check, (x + 22, y + 73), img_check)
             else:
-                # Respaldo por si no encuentra la imagen física del check
                 d.rectangle([x + 22, y + 75, x + 48, y + 95], outline=(0, 255, 120), width=2)
                 d.text((x + 28, y + 76), "✓", fill=(0, 255, 120))
             
