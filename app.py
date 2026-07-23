@@ -8,6 +8,7 @@ import io
 IMG_FOLDER = "imagenes"
 IMAGEN_FONDO_PATH = os.path.join(IMG_FOLDER, "fondo_catalogo.png")
 FUENTE_CUSTOM_PATH = os.path.join(IMG_FOLDER, "burbank.ttf") 
+FUENTE_ONLINE_PATH = os.path.join(IMG_FOLDER, "fuente_fallback.ttf")
 CHECK_ICON_PATH = os.path.join(IMG_FOLDER, "check_verde.png")
 
 MAPA_NOMBRES = {
@@ -33,6 +34,18 @@ str_lit.title("Tracker de Espíritus - Fortnite")
 if 'seleccionados' not in str_lit.session_state:
     str_lit.session_state.seleccionados = set()
 
+# Asegurar que exista la carpeta imagenes
+if not os.path.exists(IMG_FOLDER):
+    os.makedirs(IMG_FOLDER)
+
+# Descargar una fuente gruesa de respaldo si no existe ninguna
+if not os.path.exists(FUENTE_ONLINE_PATH) and not os.path.exists(FUENTE_CUSTOM_PATH):
+    try:
+        url_fuente = "https://github.com/google/fonts/raw/main/ufl/montserrat/Montserrat-Black.ttf"
+        urllib.request.urlretrieve(url_fuente, FUENTE_ONLINE_PATH)
+    except:
+        pass
+
 def obtener_titulo_categoria(nombre_archivo):
     return nombre_archivo.split('-')[1].replace("_", " ")
 
@@ -42,7 +55,7 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
     alto_celda = 110
     
     padding_lateral = 20
-    padding_superior = 90 # Un poco más de espacio arriba para el banner grande
+    padding_superior = 90 
     
     filas = (len(lista_ordenada_archivos) // columnas) + 1
     
@@ -58,8 +71,8 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
     capa_ui = Image.new('RGBA', (ancho_total, alto_total), (0, 0, 0, 0))
     d_ui = ImageDraw.Draw(capa_ui)
     
-    # Banner superior más alto y proporcionado (de y=15 a y=75)
-    d_ui.rectangle([padding_lateral, 15, ancho_total - padding_lateral, 75], fill=(0, 0, 0, 180))
+    # Banner superior amplio
+    d_ui.rectangle([padding_lateral, 15, ancho_total - padding_lateral, 75], fill=(0, 0, 0, 190))
     
     for i in range(len(lista_ordenada_archivos)):
         x = padding_lateral + (i % columnas) * ancho_celda + 10
@@ -68,17 +81,20 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
         
     img_final = Image.alpha_composite(img_final, capa_ui)
     
-    # Carga de fuente robusta con tamaños grandes (44px y 38px)
+    # Carga de fuente con prioridades claras y tamaños grandes (42px y 36px)
     font_titulo = None
     font_contador = None
     
     try:
         if os.path.exists(FUENTE_CUSTOM_PATH):
-            font_titulo = ImageFont.truetype(FUENTE_CUSTOM_PATH, 44)
-            font_contador = ImageFont.truetype(FUENTE_CUSTOM_PATH, 38)
+            font_titulo = ImageFont.truetype(FUENTE_CUSTOM_PATH, 42)
+            font_contador = ImageFont.truetype(FUENTE_CUSTOM_PATH, 36)
+        elif os.path.exists(FUENTE_ONLINE_PATH):
+            font_titulo = ImageFont.truetype(FUENTE_ONLINE_PATH, 42)
+            font_contador = ImageFont.truetype(FUENTE_ONLINE_PATH, 36)
         else:
-            font_titulo = ImageFont.truetype("arial.ttf", 44)
-            font_contador = ImageFont.truetype("arial.ttf", 38)
+            font_titulo = ImageFont.load_default()
+            font_contador = ImageFont.load_default()
     except:
         font_titulo = ImageFont.load_default()
         font_contador = ImageFont.load_default()
@@ -90,12 +106,12 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
     obtenidos = sum(1 for f in lista_ordenada_archivos if os.path.splitext(f)[0] in seleccionados)
     texto_progreso = f"{obtenidos}/{total_items}"
     
-    # Coordenadas y sombra perfectamente alineadas para el tamaño grande
+    # Sombra y texto principal perfectamente posicionados
     d.text((padding_lateral + 22, 24), texto_titulo, fill=(0, 0, 0, 255), font=font_titulo)
-    d.text((ancho_total - padding_lateral - 142, 28), texto_progreso, fill=(0, 0, 0, 255), font=font_contador)
+    d.text((ancho_total - padding_lateral - 132, 28), texto_progreso, fill=(0, 0, 0, 255), font=font_contador)
     
     d.text((padding_lateral + 20, 22), texto_titulo, fill=(255, 255, 255), font=font_titulo)
-    d.text((ancho_total - padding_lateral - 145, 26), texto_progreso, fill=(0, 255, 120), font=font_contador)
+    d.text((ancho_total - padding_lateral - 135, 26), texto_progreso, fill=(0, 255, 120), font=font_contador)
     
     img_check = None
     if os.path.exists(CHECK_ICON_PATH):
@@ -127,7 +143,7 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
     return buf.getvalue()
 
 if os.path.exists(IMG_FOLDER):
-    archivos_crudos = sorted([f for f in os.listdir(IMG_FOLDER) if f.endswith('.png') and f != 'fondo_catalogo.png' and f != 'check_verde.png'])
+    archivos_crudos = sorted([f for f in os.listdir(IMG_FOLDER) if f.endswith('.png') and f != 'fondo_catalogo.png' and f != 'check_verde.png' and f != 'fuente_fallback.ttf'])
     
     archivos_ordenados = []
     for categoria, grupo in groupby(archivos_crudos, key=obtener_titulo_categoria):
