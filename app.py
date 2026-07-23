@@ -1,5 +1,6 @@
 import streamlit as str_lit
 import os
+import urllib.request
 from itertools import groupby
 from PIL import Image, ImageDraw, ImageFont
 import io
@@ -41,7 +42,7 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
     alto_celda = 110
     
     padding_lateral = 20
-    padding_superior = 80 
+    padding_superior = 90 # Un poco más de espacio arriba para el banner grande
     
     filas = (len(lista_ordenada_archivos) // columnas) + 1
     
@@ -57,7 +58,8 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
     capa_ui = Image.new('RGBA', (ancho_total, alto_total), (0, 0, 0, 0))
     d_ui = ImageDraw.Draw(capa_ui)
     
-    d_ui.rectangle([padding_lateral, 15, ancho_total - padding_lateral, 65], fill=(0, 0, 0, 160))
+    # Banner superior más alto y proporcionado (de y=15 a y=75)
+    d_ui.rectangle([padding_lateral, 15, ancho_total - padding_lateral, 75], fill=(0, 0, 0, 180))
     
     for i in range(len(lista_ordenada_archivos)):
         x = padding_lateral + (i % columnas) * ancho_celda + 10
@@ -66,32 +68,34 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
         
     img_final = Image.alpha_composite(img_final, capa_ui)
     
-    # Tamaños de fuente ajustados para mayor presencia visual
+    # Carga de fuente robusta con tamaños grandes (44px y 38px)
+    font_titulo = None
+    font_contador = None
+    
     try:
         if os.path.exists(FUENTE_CUSTOM_PATH):
-            font_titulo = ImageFont.truetype(FUENTE_CUSTOM_PATH, 30)
-            font_contador = ImageFont.truetype(FUENTE_CUSTOM_PATH, 26)
+            font_titulo = ImageFont.truetype(FUENTE_CUSTOM_PATH, 44)
+            font_contador = ImageFont.truetype(FUENTE_CUSTOM_PATH, 38)
         else:
-            font_titulo = ImageFont.truetype("impact.ttf", 30)
-            font_contador = ImageFont.truetype("impact.ttf", 26)
+            font_titulo = ImageFont.truetype("arial.ttf", 44)
+            font_contador = ImageFont.truetype("arial.ttf", 38)
     except:
         font_titulo = ImageFont.load_default()
         font_contador = ImageFont.load_default()
         
     d = ImageDraw.Draw(img_final)
     
-    # Texto sin acentos para evitar errores de renderizado en Linux/Cloud
     texto_titulo = "MI COLECCION DE ESPIRITUS"
     total_items = len(lista_ordenada_archivos)
     obtenidos = sum(1 for f in lista_ordenada_archivos if os.path.splitext(f)[0] in seleccionados)
     texto_progreso = f"{obtenidos}/{total_items}"
     
-    # Posición vertical ajustada (y=24) para que el texto grande luzca bien centrado en el banner de 50px de alto
-    d.text((padding_lateral + 17, 26), texto_titulo, fill=(0, 0, 0, 255), font=font_titulo)
-    d.text((ancho_total - padding_lateral - 98, 28), texto_progreso, fill=(0, 0, 0, 255), font=font_contador)
+    # Coordenadas y sombra perfectamente alineadas para el tamaño grande
+    d.text((padding_lateral + 22, 24), texto_titulo, fill=(0, 0, 0, 255), font=font_titulo)
+    d.text((ancho_total - padding_lateral - 142, 28), texto_progreso, fill=(0, 0, 0, 255), font=font_contador)
     
-    d.text((padding_lateral + 15, 24), texto_titulo, fill=(255, 255, 255), font=font_titulo)
-    d.text((ancho_total - padding_lateral - 100, 26), texto_progreso, fill=(0, 255, 120), font=font_contador)
+    d.text((padding_lateral + 20, 22), texto_titulo, fill=(255, 255, 255), font=font_titulo)
+    d.text((ancho_total - padding_lateral - 145, 26), texto_progreso, fill=(0, 255, 120), font=font_contador)
     
     img_check = None
     if os.path.exists(CHECK_ICON_PATH):
