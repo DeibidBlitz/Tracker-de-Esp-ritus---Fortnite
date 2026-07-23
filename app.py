@@ -1,12 +1,14 @@
-import streamlit as st
+import streamlit as str_lit
 import os
 from itertools import groupby
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 import io
 
 IMG_FOLDER = "imagenes"
+IMAGEN_FONDO_PATH = os.path.join(IMG_FOLDER, "fondo_catalogo.png")
+FUENTE_CUSTOM_PATH = os.path.join(IMG_FOLDER, "burbank.ttf") 
+CHECK_ICON_PATH = os.path.join(IMG_FOLDER, "check_verde.png")
 
-# --- DICCIONARIO DE NOMBRES ---
 MAPA_NOMBRES = {
     "11-PUNTO_CERO-01_Punto-Cero_Normal": "Punto Cero",
     "11-PUNTO_CERO-02_Punto-Cero_Dorado": "Punto Cero Dorado",
@@ -24,52 +26,106 @@ MAPA_NOMBRES = {
     "20-VINI_JR-01_Vini_Jr_Normal": "Vini Jr",
 }
 
-st.set_page_config(page_title="Tracker de Espíritus", layout="wide")
-st.title("Tracker de Espíritus - Fortnite")
+str_lit.set_page_config(page_title="Tracker de Espíritus", layout="wide")
+str_lit.title("Tracker de Espíritus - Fortnite")
 
-if 'seleccionados' not in st.session_state:
-    st.session_state.seleccionados = set()
+if 'seleccionados' not in str_lit.session_state:
+    str_lit.session_state.seleccionados = set()
 
 def obtener_titulo_categoria(nombre_archivo):
     return nombre_archivo.split('-')[1].replace("_", " ")
 
-# --- GENERADOR DE IMAGEN (Sincronizado con el orden visual por categorías) ---
 def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
     columnas = 10
     ancho_celda = 90
     alto_celda = 110
+    
+    padding_lateral = 20
+    padding_superior = 80 
+    
     filas = (len(lista_ordenada_archivos) // columnas) + 1
     
-    img_final = Image.new('RGB', (columnas * ancho_celda, filas * alto_celda), color=(20, 20, 20))
+    ancho_total = (columnas * ancho_celda) + (padding_lateral * 2)
+    alto_total = (filas * alto_celda) + padding_superior + 20
+    
+    if os.path.exists(IMAGEN_FONDO_PATH):
+        fondo_original = Image.open(IMAGEN_FONDO_PATH).convert('RGBA')
+        img_final = fondo_original.resize((ancho_total, alto_total))
+    else:
+        img_final = Image.new('RGBA', (ancho_total, alto_total), color=(20, 20, 20, 255))
+        
+    capa_ui = Image.new('RGBA', (ancho_total, alto_total), (0, 0, 0, 0))
+    d_ui = ImageDraw.Draw(capa_ui)
+    
+    d_ui.rectangle([padding_lateral, 15, ancho_total - padding_lateral, 65], fill=(0, 0, 0, 160))
+    
+    for i in range(len(lista_ordenada_archivos)):
+        x = padding_lateral + (i % columnas) * ancho_celda + 10
+        y = padding_superior + (i // columnas) * alto_celda + 10
+        d_ui.rectangle([x - 5, y - 5, x + 75, y + 100], fill=(0, 0, 0, 100))
+        
+    img_final = Image.alpha_composite(img_final, capa_ui)
+    
+    try:
+        if os.path.exists(FUENTE_CUSTOM_PATH):
+            font_titulo = ImageFont.truetype(FUENTE_CUSTOM_PATH, 22)
+            font_contador = ImageFont.truetype(FUENTE_CUSTOM_PATH, 20)
+        else:
+            font_titulo = ImageFont.truetype("impact.ttf", 22)
+            font_contador = ImageFont.truetype("impact.ttf", 20)
+    except:
+        font_titulo = ImageFont.load_default()
+        font_contador = ImageFont.load_default()
+        
     d = ImageDraw.Draw(img_final)
     
+    texto_titulo = "MI COLECCIÓN DE ESPÍRITUS"
+    total_items = len(lista_ordenada_archivos)
+    obtenidos = sum(1 for f in lista_ordenada_archivos if os.path.splitext(f)[0] in seleccionados)
+    texto_progreso = f"{obtenidos}/{total_items}"
+    
+    d.text((padding_lateral + 17, 32), texto_titulo, fill=(0, 0, 0, 255), font=font_titulo)
+    d.text((ancho_total - padding_lateral - 78, 34), texto_progreso, fill=(0, 0, 0, 255), font=font_contador)
+    
+    d.text((padding_lateral + 15, 30), texto_titulo, fill=(255, 255, 255), font=font_titulo)
+    d.text((ancho_total - padding_lateral - 80, 32), texto_progreso, fill=(0, 255, 120), font=font_contador)
+    
+    # Cargar el icono del check si existe para pegarlo en los elementos seleccionados
+    img_check = None
+    if os.path.exists(CHECK_ICON_PATH):
+        img_check = Image.open(CHECK_ICON_PATH).convert('RGBA').resize((26, 26))
+
     for i, archivo in enumerate(lista_ordenada_archivos):
         ruta = os.path.join(IMG_FOLDER, archivo)
-        img_espiritu = Image.open(ruta).resize((70, 70))
+        img_espiritu = Image.open(ruta).convert('RGBA').resize((70, 70))
         
-        x = (i % columnas) * ancho_celda + 10
-        y = (i // columnas) * alto_celda + 10
+        x = padding_lateral + (i % columnas) * ancho_celda + 10
+        y = padding_superior + (i // columnas) * alto_celda + 10
         
-        img_final.paste(img_espiritu, (x, y))
+        img_final.paste(img_espiritu, (x, y), img_espiritu)
         
         nombre_base = os.path.splitext(archivo)[0]
-        
         is_checked = nombre_base in seleccionados
-        color_cuadro = (0, 255, 0) if is_checked else (100, 100, 100)
         
-        d.rectangle([x + 25, y + 75, x + 45, y + 95], outline=color_cuadro, width=2)
+        # Casilla base gris tenue
+        d.rectangle([x + 22, y + 75, x + 48, y + 95], outline=(120, 120, 120), width=1)
+        
         if is_checked:
-            d.text((x + 30, y + 78), "✓", fill=color_cuadro)
+            if img_check:
+                # Pegar la imagen del check exactamente en la zona de la casilla
+                img_final.paste(img_check, (x + 22, y + 73), img_check)
+            else:
+                # Respaldo por si no encuentra la imagen física del check
+                d.rectangle([x + 22, y + 75, x + 48, y + 95], outline=(0, 255, 120), width=2)
+                d.text((x + 28, y + 76), "✓", fill=(0, 255, 120))
             
     buf = io.BytesIO()
     img_final.save(buf, format="PNG")
     return buf.getvalue()
 
-# --- LÓGICA PRINCIPAL ---
 if os.path.exists(IMG_FOLDER):
-    archivos_crudos = sorted([f for f in os.listdir(IMG_FOLDER) if f.endswith('.png')])
+    archivos_crudos = sorted([f for f in os.listdir(IMG_FOLDER) if f.endswith('.png') and f != 'fondo_catalogo.png' and f != 'check_verde.png'])
     
-    # Reconstruimos la misma lista ordenada exactamente como se muestra en pantalla por categoría
     archivos_ordenados = []
     for categoria, grupo in groupby(archivos_crudos, key=obtener_titulo_categoria):
         archivos_ordenados.extend(list(grupo))
@@ -78,30 +134,28 @@ if os.path.exists(IMG_FOLDER):
         lista_grupo = list(grupo)
         ids_grupo = [os.path.splitext(f)[0] for f in lista_grupo]
         
-        num_seleccionados = sum(1 for id_esp in ids_grupo if id_esp in st.session_state.seleccionados)
+        num_seleccionados = sum(1 for id_esp in ids_grupo if id_esp in str_lit.session_state.seleccionados)
         todos_seleccionados = (num_seleccionados == len(ids_grupo))
         
-        # --- Cabecera de Categoría con Checkbox sincronizado ---
-        col_tit, col_chk = st.columns([2, 10])
+        col_tit, col_chk = str_lit.columns([2, 10])
         with col_tit:
             def toggle_categoria(ids=ids_grupo):
-                current_all = all(id_esp in st.session_state.seleccionados for id_esp in ids)
+                current_all = all(id_esp in str_lit.session_state.seleccionados for id_esp in ids)
                 if current_all:
                     for id_esp in ids:
-                        st.session_state.seleccionados.discard(id_esp)
+                        str_lit.session_state.seleccionados.discard(id_esp)
                 else:
                     for id_esp in ids:
-                        st.session_state.seleccionados.add(id_esp)
+                        str_lit.session_state.seleccionados.add(id_esp)
 
-            st.checkbox(
+            str_lit.checkbox(
                 f"**{categoria.title()}**", 
                 value=todos_seleccionados, 
                 key=f"cat_chk_{categoria}",
                 on_change=toggle_categoria
             )
         
-        # --- CUADRÍCULA DE ESPÍRITUS ---
-        cols = st.columns(5)
+        cols = str_lit.columns(5)
         
         for i, archivo in enumerate(lista_grupo):
             nombre_base = os.path.splitext(archivo)[0]
@@ -110,29 +164,28 @@ if os.path.exists(IMG_FOLDER):
             nombre_mostrado = nombre_crudo.replace("Normal", "").strip()
             
             with cols[i % 5]:
-                st.image(f"{IMG_FOLDER}/{archivo}", width=100)
+                str_lit.image(f"{IMG_FOLDER}/{archivo}", width=100)
                 
-                is_checked = nombre_base in st.session_state.seleccionados
+                is_checked = nombre_base in str_lit.session_state.seleccionados
                 etiqueta = f"{'✅' if is_checked else '⬜'} {nombre_mostrado}"
                 
-                if st.button(etiqueta, key=f"btn_{nombre_base}", use_container_width=True, type="primary" if is_checked else "secondary"):
+                if str_lit.button(etiqueta, key=f"btn_{nombre_base}", use_container_width=True, type="primary" if is_checked else "secondary"):
                     if is_checked:
-                        st.session_state.seleccionados.remove(nombre_base)
+                        str_lit.session_state.seleccionados.remove(nombre_base)
                     else:
-                        st.session_state.seleccionados.add(nombre_base)
-                    st.rerun()
+                        str_lit.session_state.seleccionados.add(nombre_base)
+                    str_lit.rerun()
 
-    st.divider()
-    if st.session_state.seleccionados:
-        # Pasamos la lista que respeta el orden visual de las categorías
-        img_bytes = generar_imagen_coleccion(archivos_ordenados, st.session_state.seleccionados)
-        st.download_button(
+    str_lit.divider()
+    if str_lit.session_state.seleccionados:
+        img_bytes = generar_imagen_coleccion(archivos_ordenados, str_lit.session_state.seleccionados)
+        str_lit.download_button(
             label="💾 Descargar Catálogo Visual",
             data=img_bytes,
             file_name="catalogo_espiritus.png",
             mime="image/png"
         )
     else:
-        st.info("Selecciona algunos espíritus para poder descargar la imagen.")
+        str_lit.info("Selecciona algunos espíritus para poder descargar la imagen.")
 else:
-    st.warning("Aún no he encontrado la carpeta de imágenes.")
+    str_lit.warning("Aún no he encontrado la carpeta de imágenes.")
