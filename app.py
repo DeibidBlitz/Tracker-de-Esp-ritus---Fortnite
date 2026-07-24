@@ -78,39 +78,30 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
         img_final.paste(img_titulo, (padding_lateral + 20, 26), img_titulo)
 
     # -------------------------------------------------------------
-    # NUEVO PARADIGMA: Contador dinámico con fuente vectorial segura
+    # CONTADOR DINÁMICO: Usando Burbank Big Condensed (Fuente oficial)
     # -------------------------------------------------------------
     total_items = len(lista_ordenada_archivos)
     obtenidos = sum(1 for f in lista_ordenada_archivos if os.path.splitext(f)[0] in seleccionados)
     texto_progreso = f"{obtenidos}/{total_items}"
     
-    # Rutas comunes de fuentes negritas según sistema operativo (Linux para Streamlit Cloud, Windows para local)
-    rutas_fuentes = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",  # Linux / Streamlit Cloud
-        "C:/Windows/Fonts/arialbd.ttf",                          # Windows Local (alternativa segura)
-        "Arial"
-    ]
+    # Ruta directa al archivo .ttf dentro de tu carpeta de imágenes
+    ruta_fuente = os.path.join(IMG_FOLDER, "BURBANK.ttf")
     
-    font_contador = None
-    for ruta_f in rutas_fuentes:
-        try:
-            font_contador = ImageFont.truetype(ruta_f, 26)
-            break
-        except IOError:
-            continue
-            
-    if font_contador is None:
+    try:
+        font_contador = ImageFont.truetype(ruta_fuente, 30)
+    except IOError:
+        # Respaldo por seguridad si el archivo llegara a faltar
         font_contador = ImageFont.load_default()
 
     d = ImageDraw.Draw(img_final)
-    pos_x_texto = ancho_total - padding_lateral - 110
-    pos_y_texto = 30
+    pos_x_texto = ancho_total - padding_lateral - 120
+    pos_y_texto = 28
     
-    # Dibujar contorno negro múltiple (Esimula borde grueso estilo Fortnite)
+    # Dibujar contorno negro múltiple (Estilo Fortnite)
     for dx, dy in [(-2, 0), (2, 0), (0, -2), (0, 2), (-2, -2), (2, 2), (-2, 2), (2, -2)]:
         d.text((pos_x_texto + dx, pos_y_texto + dy), texto_progreso, fill=(0, 0, 0, 255), font=font_contador)
     
-    # Texto principal encima (Verde brillante característico)
+    # Texto principal verde encima
     d.text((pos_x_texto, pos_y_texto), texto_progreso, fill=(0, 255, 120, 255), font=font_contador)
     # -------------------------------------------------------------
 
@@ -144,7 +135,6 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
     return buf.getvalue()
 
 if os.path.exists(IMG_FOLDER):
-    # Excluimos de la lista de espíritus los archivos de UI y los antiguos prefijos numéricos si quedaron por ahí
     archivos_crudos = sorted([f for f in os.listdir(IMG_FOLDER) if f.endswith('.png') and not f.startswith('num_') and f not in ['fondo_catalogo.png', 'check_verde.png', 'titulo_banner.png', 'fuente_fallback.ttf']])
     
     archivos_ordenados = []
