@@ -37,14 +37,13 @@ if 'seleccionados' not in str_lit.session_state:
 if not os.path.exists(IMG_FOLDER):
     os.makedirs(IMG_FOLDER)
 
-# Descarga automática garantizada de fuente online si no existe ninguna
+# Descarga automática de respaldo ultraseguro si no existe fuente local ni online previa
 if not os.path.exists(FUENTE_CUSTOM_PATH) and not os.path.exists(FUENTE_ONLINE_PATH):
     try:
-        # Enlace directo oficial al archivo .ttf de Montserrat Black en GitHub de Google Fonts
-        url_fuente = "https://github.com/google/fonts/raw/main/of/montserrat/Montserrat-Black.ttf"
-        urllib.request.urlretrieve(url_fuente, FUENTE_ONLINE_PATH)
-    except Exception as e:
-        print(f"No se pudo descargar la fuente online: {e}")
+        url_alternativa = "https://www.w3.org/Style/Examples/007/fonts/VeraBd.ttf"
+        urllib.request.urlretrieve(url_alternativa, FUENTE_ONLINE_PATH)
+    except Exception:
+        pass
 
 def obtener_titulo_categoria(nombre_archivo):
     return nombre_archivo.split('-')[1].replace("_", " ")
@@ -80,7 +79,7 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
         
     img_final = Image.alpha_composite(img_final, capa_ui)
     
-    # Carga de fuente asegurando tamaño grande mediante archivo físico descargado o local
+    # Carga de fuente asegurada con archivo físico y tamaños definidos
     font_titulo = None
     font_contador = None
     
@@ -92,10 +91,9 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
             font_titulo = ImageFont.truetype(FUENTE_ONLINE_PATH, 42)
             font_contador = ImageFont.truetype(FUENTE_ONLINE_PATH, 36)
         else:
-            # Plan de emergencia absoluto si todo falla
             font_titulo = ImageFont.load_default()
             font_contador = ImageFont.load_default()
-    except:
+    except Exception:
         font_titulo = ImageFont.load_default()
         font_contador = ImageFont.load_default()
         
