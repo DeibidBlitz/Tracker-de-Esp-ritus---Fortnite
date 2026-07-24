@@ -60,7 +60,6 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
     capa_ui = Image.new('RGBA', (ancho_total, alto_total), (0, 0, 0, 0))
     d_ui = ImageDraw.Draw(capa_ui)
     
-    # Banner superior amplio
     d_ui.rectangle([padding_lateral, 15, ancho_total - padding_lateral, 75], fill=(0, 0, 0, 190))
     
     for i in range(len(lista_ordenada_archivos)):
@@ -70,7 +69,7 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
         
     img_final = Image.alpha_composite(img_final, capa_ui)
     
-    # Pegar la imagen del título si existe
+    # Pegar la imagen del título principal
     if os.path.exists(TITULO_IMAGEN_PATH):
         img_titulo = Image.open(TITULO_IMAGEN_PATH).convert('RGBA')
         h_proporcional = 40
@@ -78,15 +77,43 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
         img_titulo = img_titulo.resize((w_proporcional, h_proporcional))
         img_final.paste(img_titulo, (padding_lateral + 20, 26), img_titulo)
 
-    d = ImageDraw.Draw(img_final)
-    
+    # -------------------------------------------------------------
+    # NUEVO PARADIGMA: Contador dinámico con fuente vectorial segura
+    # -------------------------------------------------------------
     total_items = len(lista_ordenada_archivos)
     obtenidos = sum(1 for f in lista_ordenada_archivos if os.path.splitext(f)[0] in seleccionados)
     texto_progreso = f"{obtenidos}/{total_items}"
     
-    font_default = ImageFont.load_default()
-    d.text((ancho_total - padding_lateral - 80, 36), texto_progreso, fill=(0, 255, 120), font=font_default)
+    # Rutas comunes de fuentes negritas según sistema operativo (Linux para Streamlit Cloud, Windows para local)
+    rutas_fuentes = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",  # Linux / Streamlit Cloud
+        "C:/Windows/Fonts/arialbd.ttf",                          # Windows Local (alternativa segura)
+        "Arial"
+    ]
     
+    font_contador = None
+    for ruta_f in rutas_fuentes:
+        try:
+            font_contador = ImageFont.truetype(ruta_f, 26)
+            break
+        except IOError:
+            continue
+            
+    if font_contador is None:
+        font_contador = ImageFont.load_default()
+
+    d = ImageDraw.Draw(img_final)
+    pos_x_texto = ancho_total - padding_lateral - 110
+    pos_y_texto = 30
+    
+    # Dibujar contorno negro múltiple (Esimula borde grueso estilo Fortnite)
+    for dx, dy in [(-2, 0), (2, 0), (0, -2), (0, 2), (-2, -2), (2, 2), (-2, 2), (2, -2)]:
+        d.text((pos_x_texto + dx, pos_y_texto + dy), texto_progreso, fill=(0, 0, 0, 255), font=font_contador)
+    
+    # Texto principal encima (Verde brillante característico)
+    d.text((pos_x_texto, pos_y_texto), texto_progreso, fill=(0, 255, 120, 255), font=font_contador)
+    # -------------------------------------------------------------
+
     img_check = None
     if os.path.exists(CHECK_ICON_PATH):
         img_check = Image.open(CHECK_ICON_PATH).convert('RGBA').resize((26, 26))
@@ -117,7 +144,8 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
     return buf.getvalue()
 
 if os.path.exists(IMG_FOLDER):
-    archivos_crudos = sorted([f for f in os.listdir(IMG_FOLDER) if f.endswith('.png') and f not in ['fondo_catalogo.png', 'check_verde.png', 'titulo_banner.png', 'fuente_fallback.ttf']])
+    # Excluimos de la lista de espíritus los archivos de UI y los antiguos prefijos numéricos si quedaron por ahí
+    archivos_crudos = sorted([f for f in os.listdir(IMG_FOLDER) if f.endswith('.png') and not f.startswith('num_') and f not in ['fondo_catalogo.png', 'check_verde.png', 'titulo_banner.png', 'fuente_fallback.ttf']])
     
     archivos_ordenados = []
     for categoria, grupo in groupby(archivos_crudos, key=obtener_titulo_categoria):
