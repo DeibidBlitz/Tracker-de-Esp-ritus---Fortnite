@@ -20,6 +20,7 @@ MAPA_NOMBRES = {
     "12-PALITO_DE_PEZ-02_Palito-De_Pez_Dorado": "Palito De Pez Dorado",
     "12-PALITO_DE_PEZ-03_Palito-De_Pez_Golosina": "Palito De Pez Golosina",
     "12-PALITO_DE_PEZ-04_Palito-De_Pez_Galáctico": "Palito De Pez Galáctico",
+    "12-PALITO_DE_PEZ-05_Palito-De_Pez_Cubo": "Palito De Pez Cubo",
     "18-LOS_SIETE-01_Los_Siete_Normal": "Los Siete",
     "18-LOS_SIETE-02_Los_Siete_Dorado": "Los Siete Dorado",
     "18-LOS_SIETE-03_Los_Siete_Golosina": "Los Siete Golosina",
