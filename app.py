@@ -20,7 +20,6 @@ MAPA_NOMBRES = {
     "12-PALITO_DE_PEZ-02_Palito-De_Pez_Dorado": "Palito De Pez Dorado",
     "12-PALITO_DE_PEZ-03_Palito-De_Pez_Golosina": "Palito De Pez Golosina",
     "12-PALITO_DE_PEZ-04_Palito-De_Pez_Galáctico": "Palito De Pez Galáctico",
-    "12-PALITO_DE_PEZ-05_Palito-De_Pez_Cubo": "Palito De Pez Cubo",
     "18-LOS_SIETE-01_Los_Siete_Normal": "Los Siete",
     "18-LOS_SIETE-02_Los_Siete_Dorado": "Los Siete Dorado",
     "18-LOS_SIETE-03_Los_Siete_Golosina": "Los Siete Golosina",
@@ -35,17 +34,17 @@ str_lit.title("Tracker de Espíritus - Fortnite")
 if 'seleccionados' not in str_lit.session_state:
     str_lit.session_state.seleccionados = set()
 
-# Asegurar que exista la carpeta imagenes
 if not os.path.exists(IMG_FOLDER):
     os.makedirs(IMG_FOLDER)
 
-# Descargar una fuente gruesa de respaldo si no existe ninguna
-if not os.path.exists(FUENTE_ONLINE_PATH) and not os.path.exists(FUENTE_CUSTOM_PATH):
+# Descarga automática garantizada de fuente online si no existe ninguna
+if not os.path.exists(FUENTE_CUSTOM_PATH) and not os.path.exists(FUENTE_ONLINE_PATH):
     try:
-        url_fuente = "https://github.com/google/fonts/raw/main/ufl/montserrat/Montserrat-Black.ttf"
+        # Enlace directo oficial al archivo .ttf de Montserrat Black en GitHub de Google Fonts
+        url_fuente = "https://github.com/google/fonts/raw/main/of/montserrat/Montserrat-Black.ttf"
         urllib.request.urlretrieve(url_fuente, FUENTE_ONLINE_PATH)
-    except:
-        pass
+    except Exception as e:
+        print(f"No se pudo descargar la fuente online: {e}")
 
 def obtener_titulo_categoria(nombre_archivo):
     return nombre_archivo.split('-')[1].replace("_", " ")
@@ -72,7 +71,6 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
     capa_ui = Image.new('RGBA', (ancho_total, alto_total), (0, 0, 0, 0))
     d_ui = ImageDraw.Draw(capa_ui)
     
-    # Banner superior amplio
     d_ui.rectangle([padding_lateral, 15, ancho_total - padding_lateral, 75], fill=(0, 0, 0, 190))
     
     for i in range(len(lista_ordenada_archivos)):
@@ -82,7 +80,7 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
         
     img_final = Image.alpha_composite(img_final, capa_ui)
     
-    # Carga de fuente con prioridades claras y tamaños grandes (42px y 36px)
+    # Carga de fuente asegurando tamaño grande mediante archivo físico descargado o local
     font_titulo = None
     font_contador = None
     
@@ -94,6 +92,7 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
             font_titulo = ImageFont.truetype(FUENTE_ONLINE_PATH, 42)
             font_contador = ImageFont.truetype(FUENTE_ONLINE_PATH, 36)
         else:
+            # Plan de emergencia absoluto si todo falla
             font_titulo = ImageFont.load_default()
             font_contador = ImageFont.load_default()
     except:
@@ -107,7 +106,6 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
     obtenidos = sum(1 for f in lista_ordenada_archivos if os.path.splitext(f)[0] in seleccionados)
     texto_progreso = f"{obtenidos}/{total_items}"
     
-    # Sombra y texto principal perfectamente posicionados
     d.text((padding_lateral + 22, 24), texto_titulo, fill=(0, 0, 0, 255), font=font_titulo)
     d.text((ancho_total - padding_lateral - 132, 28), texto_progreso, fill=(0, 0, 0, 255), font=font_contador)
     
