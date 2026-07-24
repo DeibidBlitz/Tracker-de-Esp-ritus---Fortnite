@@ -1,7 +1,7 @@
 import streamlit as str_lit
 import os
 from itertools import groupby
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 import io
 
 IMG_FOLDER = "imagenes"
@@ -73,7 +73,6 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
     # Pegar la imagen del título si existe
     if os.path.exists(TITULO_IMAGEN_PATH):
         img_titulo = Image.open(TITULO_IMAGEN_PATH).convert('RGBA')
-        # Opcional: redimensiona el título si lo necesitas ajustado a una altura de ~40px
         h_proporcional = 40
         w_proporcional = int(img_titulo.width * (h_proporcional / img_titulo.height))
         img_titulo = img_titulo.resize((w_proporcional, h_proporcional))
@@ -81,12 +80,10 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
 
     d = ImageDraw.Draw(img_final)
     
-    # Como el título ya es una imagen, solo dibujamos el contador numérico de progreso con la fuente por defecto ampliada o dibujada
     total_items = len(lista_ordenada_archivos)
     obtenidos = sum(1 for f in lista_ordenada_archivos if os.path.splitext(f)[0] in seleccionados)
     texto_progreso = f"{obtenidos}/{total_items}"
     
-    # Texto de progreso simple (puedes ajustarlo o dejarlo así)
     font_default = ImageFont.load_default()
     d.text((ancho_total - padding_lateral - 80, 36), texto_progreso, fill=(0, 255, 120), font=font_default)
     
