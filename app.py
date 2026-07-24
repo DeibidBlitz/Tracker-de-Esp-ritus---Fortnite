@@ -6,7 +6,6 @@ import io
 
 IMG_FOLDER = "imagenes"
 IMAGEN_FONDO_PATH = os.path.join(IMG_FOLDER, "fondo_catalogo.png")
-TITULO_IMAGEN_PATH = os.path.join(IMG_FOLDER, "titulo_banner.png")
 CHECK_ICON_PATH = os.path.join(IMG_FOLDER, "check_verde.png")
 
 MAPA_NOMBRES = {
@@ -60,6 +59,7 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
     capa_ui = Image.new('RGBA', (ancho_total, alto_total), (0, 0, 0, 0))
     d_ui = ImageDraw.Draw(capa_ui)
     
+    # Barra superior para la interfaz
     d_ui.rectangle([padding_lateral, 15, ancho_total - padding_lateral, 75], fill=(0, 0, 0, 190))
     
     for i in range(len(lista_ordenada_archivos)):
@@ -69,35 +69,42 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
         
     img_final = Image.alpha_composite(img_final, capa_ui)
     
-    # Pegar la imagen del título principal
-    if os.path.exists(TITULO_IMAGEN_PATH):
-        img_titulo = Image.open(TITULO_IMAGEN_PATH).convert('RGBA')
-        h_proporcional = 40
-        w_proporcional = int(img_titulo.width * (h_proporcional / img_titulo.height))
-        img_titulo = img_titulo.resize((w_proporcional, h_proporcional))
-        img_final.paste(img_titulo, (padding_lateral + 20, 26), img_titulo)
+    # Carga de la fuente oficial Burbank
+    ruta_fuente = os.path.join(IMG_FOLDER, "BURBANK.ttf")
+    try:
+        font_principal = ImageFont.truetype(ruta_fuente, 32)
+        font_contador = ImageFont.truetype(ruta_fuente, 30)
+    except IOError:
+        font_principal = ImageFont.load_default()
+        font_contador = ImageFont.load_default()
+
+    d = ImageDraw.Draw(img_final)
 
     # -------------------------------------------------------------
-    # CONTADOR DINÁMICO: Usando Burbank Big Condensed (Fuente oficial)
+    # TÍTULO PROCEDURAL: "MI COLECCIÓN DE ESPÍRITUS" con estilo Fortnite
+    # -------------------------------------------------------------
+    texto_titulo = "MI COLECCIÓN DE ESPÍRITUS"
+    pos_x_titulo = padding_lateral + 20
+    pos_y_titulo = 25
+    
+    # Contorno negro para el título
+    for dx, dy in [(-2, 0), (2, 0), (0, -2), (0, 2), (-2, -2), (2, 2), (-2, 2), (2, -2)]:
+        d.text((pos_x_titulo + dx, pos_y_titulo + dy), texto_titulo, fill=(0, 0, 0, 255), font=font_principal)
+    
+    # Texto principal blanco brillante encima
+    d.text((pos_x_titulo, pos_y_titulo), texto_titulo, fill=(255, 255, 255, 255), font=font_principal)
+
+    # -------------------------------------------------------------
+    # CONTADOR DINÁMICO PROCEDURAL: X/Y
     # -------------------------------------------------------------
     total_items = len(lista_ordenada_archivos)
     obtenidos = sum(1 for f in lista_ordenada_archivos if os.path.splitext(f)[0] in seleccionados)
     texto_progreso = f"{obtenidos}/{total_items}"
     
-    # Ruta directa al archivo .ttf dentro de tu carpeta de imágenes
-    ruta_fuente = os.path.join(IMG_FOLDER, "BURBANK.ttf")
-    
-    try:
-        font_contador = ImageFont.truetype(ruta_fuente, 30)
-    except IOError:
-        # Respaldo por seguridad si el archivo llegara a faltar
-        font_contador = ImageFont.load_default()
-
-    d = ImageDraw.Draw(img_final)
     pos_x_texto = ancho_total - padding_lateral - 120
     pos_y_texto = 28
     
-    # Dibujar contorno negro múltiple (Estilo Fortnite)
+    # Contorno negro para el contador
     for dx, dy in [(-2, 0), (2, 0), (0, -2), (0, 2), (-2, -2), (2, 2), (-2, 2), (2, -2)]:
         d.text((pos_x_texto + dx, pos_y_texto + dy), texto_progreso, fill=(0, 0, 0, 255), font=font_contador)
     
