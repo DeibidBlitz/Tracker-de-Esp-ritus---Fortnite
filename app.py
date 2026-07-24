@@ -1,14 +1,12 @@
 import streamlit as str_lit
 import os
-import urllib.request
 from itertools import groupby
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 import io
 
 IMG_FOLDER = "imagenes"
 IMAGEN_FONDO_PATH = os.path.join(IMG_FOLDER, "fondo_catalogo.png")
-FUENTE_CUSTOM_PATH = os.path.join(IMG_FOLDER, "burbank.ttf") 
-FUENTE_ONLINE_PATH = os.path.join(IMG_FOLDER, "fuente_fallback.ttf")
+TITULO_IMAGEN_PATH = os.path.join(IMG_FOLDER, "titulo_banner.png")
 CHECK_ICON_PATH = os.path.join(IMG_FOLDER, "check_verde.png")
 
 MAPA_NOMBRES = {
@@ -37,14 +35,6 @@ if 'seleccionados' not in str_lit.session_state:
 if not os.path.exists(IMG_FOLDER):
     os.makedirs(IMG_FOLDER)
 
-# Descarga automática de respaldo ultraseguro si no existe fuente local ni online previa
-if not os.path.exists(FUENTE_CUSTOM_PATH) and not os.path.exists(FUENTE_ONLINE_PATH):
-    try:
-        url_alternativa = "https://www.w3.org/Style/Examples/007/fonts/VeraBd.ttf"
-        urllib.request.urlretrieve(url_alternativa, FUENTE_ONLINE_PATH)
-    except Exception:
-        pass
-
 def obtener_titulo_categoria(nombre_archivo):
     return nombre_archivo.split('-')[1].replace("_", " ")
 
@@ -70,6 +60,7 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
     capa_ui = Image.new('RGBA', (ancho_total, alto_total), (0, 0, 0, 0))
     d_ui = ImageDraw.Draw(capa_ui)
     
+    # Banner superior amplio
     d_ui.rectangle([padding_lateral, 15, ancho_total - padding_lateral, 75], fill=(0, 0, 0, 190))
     
     for i in range(len(lista_ordenada_archivos)):
@@ -79,36 +70,25 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
         
     img_final = Image.alpha_composite(img_final, capa_ui)
     
-    # Carga de fuente asegurada con archivo físico y tamaños definidos
-    font_titulo = None
-    font_contador = None
-    
-    try:
-        if os.path.exists(FUENTE_CUSTOM_PATH):
-            font_titulo = ImageFont.truetype(FUENTE_CUSTOM_PATH, 42)
-            font_contador = ImageFont.truetype(FUENTE_CUSTOM_PATH, 36)
-        elif os.path.exists(FUENTE_ONLINE_PATH):
-            font_titulo = ImageFont.truetype(FUENTE_ONLINE_PATH, 42)
-            font_contador = ImageFont.truetype(FUENTE_ONLINE_PATH, 36)
-        else:
-            font_titulo = ImageFont.load_default()
-            font_contador = ImageFont.load_default()
-    except Exception:
-        font_titulo = ImageFont.load_default()
-        font_contador = ImageFont.load_default()
-        
+    # Pegar la imagen del título si existe
+    if os.path.exists(TITULO_IMAGEN_PATH):
+        img_titulo = Image.open(TITULO_IMAGEN_PATH).convert('RGBA')
+        # Opcional: redimensiona el título si lo necesitas ajustado a una altura de ~40px
+        h_proporcional = 40
+        w_proporcional = int(img_titulo.width * (h_proporcional / img_titulo.height))
+        img_titulo = img_titulo.resize((w_proporcional, h_proporcional))
+        img_final.paste(img_titulo, (padding_lateral + 20, 26), img_titulo)
+
     d = ImageDraw.Draw(img_final)
     
-    texto_titulo = "MI COLECCION DE ESPIRITUS"
+    # Como el título ya es una imagen, solo dibujamos el contador numérico de progreso con la fuente por defecto ampliada o dibujada
     total_items = len(lista_ordenada_archivos)
     obtenidos = sum(1 for f in lista_ordenada_archivos if os.path.splitext(f)[0] in seleccionados)
     texto_progreso = f"{obtenidos}/{total_items}"
     
-    d.text((padding_lateral + 22, 24), texto_titulo, fill=(0, 0, 0, 255), font=font_titulo)
-    d.text((ancho_total - padding_lateral - 132, 28), texto_progreso, fill=(0, 0, 0, 255), font=font_contador)
-    
-    d.text((padding_lateral + 20, 22), texto_titulo, fill=(255, 255, 255), font=font_titulo)
-    d.text((ancho_total - padding_lateral - 135, 26), texto_progreso, fill=(0, 255, 120), font=font_contador)
+    # Texto de progreso simple (puedes ajustarlo o dejarlo así)
+    font_default = ImageFont.load_default()
+    d.text((ancho_total - padding_lateral - 80, 36), texto_progreso, fill=(0, 255, 120), font=font_default)
     
     img_check = None
     if os.path.exists(CHECK_ICON_PATH):
@@ -140,7 +120,7 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
     return buf.getvalue()
 
 if os.path.exists(IMG_FOLDER):
-    archivos_crudos = sorted([f for f in os.listdir(IMG_FOLDER) if f.endswith('.png') and f != 'fondo_catalogo.png' and f != 'check_verde.png' and f != 'fuente_fallback.ttf'])
+    archivos_crudos = sorted([f for f in os.listdir(IMG_FOLDER) if f.endswith('.png') and f not in ['fondo_catalogo.png', 'check_verde.png', 'titulo_banner.png', 'fuente_fallback.ttf']])
     
     archivos_ordenados = []
     for categoria, grupo in groupby(archivos_crudos, key=obtener_titulo_categoria):
