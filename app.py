@@ -7,6 +7,7 @@ import io
 IMG_FOLDER = "imagenes"
 IMAGEN_FONDO_PATH = os.path.join(IMG_FOLDER, "fondo_catalogo.png")
 CHECK_ICON_PATH = os.path.join(IMG_FOLDER, "check_verde.png")
+CORONA_ICON_PATH = os.path.join(IMG_FOLDER, "corona.png")
 
 MAPA_NOMBRES = {
     "11-PUNTO_CERO-01_Punto-Cero_Normal": "Punto Cero",
@@ -31,13 +32,16 @@ str_lit.title("Tracker de Espíritus - Fortnite")
 if 'seleccionados' not in str_lit.session_state:
     str_lit.session_state.seleccionados = set()
 
+if 'dominados' not in str_lit.session_state:
+    str_lit.session_state.dominados = set()
+
 if not os.path.exists(IMG_FOLDER):
     os.makedirs(IMG_FOLDER)
 
 def obtener_titulo_categoria(nombre_archivo):
     return nombre_archivo.split('-')[1].replace("_", " ")
 
-def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
+def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados, dominados):
     columnas = 10
     ancho_celda = 90
     alto_celda = 110
@@ -80,41 +84,34 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
 
     d = ImageDraw.Draw(img_final)
 
-    # -------------------------------------------------------------
-    # TÍTULO PROCEDURAL: "MI COLECCIÓN DE ESPÍRITUS" con estilo Fortnite
-    # -------------------------------------------------------------
+    # TÍTULO PROCEDURAL
     texto_titulo = "MI COLECCIÓN DE ESPÍRITUS"
     pos_x_titulo = padding_lateral + 20
     pos_y_titulo = 25
     
-    # Contorno negro para el título
     for dx, dy in [(-2, 0), (2, 0), (0, -2), (0, 2), (-2, -2), (2, 2), (-2, 2), (2, -2)]:
         d.text((pos_x_titulo + dx, pos_y_titulo + dy), texto_titulo, fill=(0, 0, 0, 255), font=font_principal)
-    
-    # Texto principal blanco brillante encima
     d.text((pos_x_titulo, pos_y_titulo), texto_titulo, fill=(255, 255, 255, 255), font=font_principal)
 
-    # -------------------------------------------------------------
-    # CONTADOR DINÁMICO PROCEDURAL: X/Y
-    # -------------------------------------------------------------
+    # CONTADOR DINÁMICO PROCEDURAL (Suma tanto obtenidos como dominados)
     total_items = len(lista_ordenada_archivos)
-    obtenidos = sum(1 for f in lista_ordenada_archivos if os.path.splitext(f)[0] in seleccionados)
-    texto_progreso = f"{obtenidos}/{total_items}"
+    obtenidos_totales = sum(1 for f in lista_ordenada_archivos if (os.path.splitext(f)[0] in seleccionados) or (os.path.splitext(f)[0] in dominados))
+    texto_progreso = f"{obtenidos_totales}/{total_items}"
     
     pos_x_texto = ancho_total - padding_lateral - 120
     pos_y_texto = 28
     
-    # Contorno negro para el contador
     for dx, dy in [(-2, 0), (2, 0), (0, -2), (0, 2), (-2, -2), (2, 2), (-2, 2), (2, -2)]:
         d.text((pos_x_texto + dx, pos_y_texto + dy), texto_progreso, fill=(0, 0, 0, 255), font=font_contador)
-    
-    # Texto principal verde encima
     d.text((pos_x_texto, pos_y_texto), texto_progreso, fill=(0, 255, 120, 255), font=font_contador)
-    # -------------------------------------------------------------
 
     img_check = None
     if os.path.exists(CHECK_ICON_PATH):
         img_check = Image.open(CHECK_ICON_PATH).convert('RGBA').resize((26, 26))
+
+    img_corona = None
+    if os.path.exists(CORONA_ICON_PATH):
+        img_corona = Image.open(CORONA_ICON_PATH).convert('RGBA').resize((26, 26))
 
     for i, archivo in enumerate(lista_ordenada_archivos):
         ruta = os.path.join(IMG_FOLDER, archivo)
@@ -127,14 +124,22 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
         
         nombre_base = os.path.splitext(archivo)[0]
         is_checked = nombre_base in seleccionados
+        is_dom = nombre_base in dominados
         
+        # Un solo recuadro minimalista y centrado debajo de cada espíritu
         d.rectangle([x + 22, y + 75, x + 48, y + 95], outline=(120, 120, 120), width=1)
         
-        if is_checked:
+        if is_dom:
+            # Si está dominado, se muestra la corona limpia
+            if img_corona:
+                img_final.paste(img_corona, (x + 22, y + 73), img_corona)
+            else:
+                d.text((x + 26, y + 76), "👑", fill=(255, 215, 0))
+        elif is_checked:
+            # Si solo está obtenido, se muestra el check verde
             if img_check:
                 img_final.paste(img_check, (x + 22, y + 73), img_check)
             else:
-                d.rectangle([x + 22, y + 75, x + 48, y + 95], outline=(0, 255, 120), width=2)
                 d.text((x + 28, y + 76), "✓", fill=(0, 255, 120))
             
     buf = io.BytesIO()
@@ -142,7 +147,7 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados):
     return buf.getvalue()
 
 if os.path.exists(IMG_FOLDER):
-    archivos_crudos = sorted([f for f in os.listdir(IMG_FOLDER) if f.endswith('.png') and not f.startswith('num_') and f not in ['fondo_catalogo.png', 'check_verde.png', 'titulo_banner.png', 'fuente_fallback.ttf']])
+    archivos_crudos = sorted([f for f in os.listdir(IMG_FOLDER) if f.endswith('.png') and not f.startswith('num_') and f not in ['fondo_catalogo.png', 'check_verde.png', 'corona.png', 'titulo_banner.png', 'fuente_fallback.ttf']])
     
     archivos_ordenados = []
     for categoria, grupo in groupby(archivos_crudos, key=obtener_titulo_categoria):
@@ -152,26 +157,41 @@ if os.path.exists(IMG_FOLDER):
         lista_grupo = list(grupo)
         ids_grupo = [os.path.splitext(f)[0] for f in lista_grupo]
         
-        num_seleccionados = sum(1 for id_esp in ids_grupo if id_esp in str_lit.session_state.seleccionados)
-        todos_seleccionados = (num_seleccionados == len(ids_grupo))
+        # Validar si todos están seleccionados o dominados en esta categoría
+        todos_seleccionados = all(id_esp in str_lit.session_state.seleccionados for id_esp in ids_grupo)
+        todos_dominados = all(id_esp in str_lit.session_state.dominados for id_esp in ids_grupo)
         
-        col_tit, col_chk = str_lit.columns([2, 10])
+        # Diseño de cabecera de categoría con título y controles maestros independientes
+        col_tit, col_btn_chk, col_btn_dom = str_lit.columns([6, 3, 3])
+        
         with col_tit:
-            def toggle_categoria(ids=ids_grupo):
+            str_lit.markdown(f"### {categoria.title()}")
+            
+        with col_btn_chk:
+            def toggle_cat_chk(ids=ids_grupo):
                 current_all = all(id_esp in str_lit.session_state.seleccionados for id_esp in ids)
                 if current_all:
                     for id_esp in ids:
                         str_lit.session_state.seleccionados.discard(id_esp)
+                        str_lit.session_state.dominados.discard(id_esp)
                 else:
                     for id_esp in ids:
                         str_lit.session_state.seleccionados.add(id_esp)
 
-            str_lit.checkbox(
-                f"**{categoria.title()}**", 
-                value=todos_seleccionados, 
-                key=f"cat_chk_{categoria}",
-                on_change=toggle_categoria
-            )
+            str_lit.checkbox("✅ Todos", value=todos_seleccionados, key=f"cat_chk_{categoria}", on_change=toggle_cat_chk)
+            
+        with col_btn_dom:
+            def toggle_cat_dom(ids=ids_grupo):
+                current_all = all(id_esp in str_lit.session_state.dominados for id_esp in ids)
+                if current_all:
+                    for id_esp in ids:
+                        str_lit.session_state.dominados.discard(id_esp)
+                else:
+                    for id_esp in ids:
+                        str_lit.session_state.seleccionados.add(id_esp) # Asegurar que estén seleccionados también
+                        str_lit.session_state.dominados.add(id_esp)
+
+            str_lit.checkbox("👑 Todos", value=todos_dominados, key=f"cat_dom_{categoria}", on_change=toggle_cat_dom)
         
         cols = str_lit.columns(5)
         
@@ -184,19 +204,41 @@ if os.path.exists(IMG_FOLDER):
             with cols[i % 5]:
                 str_lit.image(f"{IMG_FOLDER}/{archivo}", width=100)
                 
-                is_checked = nombre_base in str_lit.session_state.seleccionados
-                etiqueta = f"{'✅' if is_checked else '⬜'} {nombre_mostrado}"
+                # Nombre del espíritu conservado claramente
+                str_lit.markdown(f"<div style='text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 5px;'>{nombre_mostrado}</div>", unsafe_allow_html=True)
                 
-                if str_lit.button(etiqueta, key=f"btn_{nombre_base}", use_container_width=True, type="primary" if is_checked else "secondary"):
+                is_checked = nombre_base in str_lit.session_state.seleccionados
+                is_dom = nombre_base in str_lit.session_state.dominados
+                
+                # Controles web limpios para alternar entre obtenido y dominado individualmente
+                c_btn1, c_btn2 = str_lit.columns(2)
+                
+                with c_btn1:
+                    etiqueta_chk = "✅" if is_checked else "⬜"
+                    if str_lit.button(etiqueta_chk, key=f"chk_{nombre_base}", use_container_width=True):
+                        if is_checked:
+                            str_lit.session_state.seleccionados.remove(nombre_base)
+                            if nombre_base in str_lit.session_state.dominados:
+                                str_lit.session_state.dominados.remove(nombre_base)
+                        else:
+                            str_lit.session_state.seleccionados.add(nombre_base)
+                        str_lit.rerun()
+                
+                with c_btn2:
+                    etiqueta_dom = "👑" if is_dom else "⬚"
                     if is_checked:
-                        str_lit.session_state.seleccionados.remove(nombre_base)
+                        if str_lit.button(etiqueta_dom, key=f"dom_{nombre_base}", use_container_width=True):
+                            if is_dom:
+                                str_lit.session_state.dominados.remove(nombre_base)
+                            else:
+                                str_lit.session_state.dominados.add(nombre_base)
+                            str_lit.rerun()
                     else:
-                        str_lit.session_state.seleccionados.add(nombre_base)
-                    str_lit.rerun()
+                        str_lit.button("🔒", key=f"dom_{nombre_base}", disabled=True, use_container_width=True)
 
     str_lit.divider()
-    if str_lit.session_state.seleccionados:
-        img_bytes = generar_imagen_coleccion(archivos_ordenados, str_lit.session_state.seleccionados)
+    if str_lit.session_state.seleccionados or str_lit.session_state.dominados:
+        img_bytes = generar_imagen_coleccion(archivos_ordenados, str_lit.session_state.seleccionados, str_lit.session_state.dominados)
         str_lit.download_button(
             label="💾 Descargar Catálogo Visual",
             data=img_bytes,
