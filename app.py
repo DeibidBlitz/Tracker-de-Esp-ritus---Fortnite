@@ -70,7 +70,15 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados, dominados):
     for i in range(len(lista_ordenada_archivos)):
         x = padding_lateral + (i % columnas) * ancho_celda + 10
         y = padding_superior + (i // columnas) * alto_celda + 10
-        d_ui.rectangle([x - 5, y - 5, x + 75, y + 100], fill=(0, 0, 0, 100))
+        
+        nombre_base = os.path.splitext(lista_ordenada_archivos[i])[0]
+        is_dom = nombre_base in dominados
+        
+        # Destacar el fondo de la celda si está dominado (marco dorado sutil detrás)
+        if is_dom:
+            d_ui.rectangle([x - 5, y - 5, x + 75, y + 100], fill=(255, 215, 0, 40), outline=(255, 215, 0, 180), width=2)
+        else:
+            d_ui.rectangle([x - 5, y - 5, x + 75, y + 100], fill=(0, 0, 0, 100))
         
     img_final = Image.alpha_composite(img_final, capa_ui)
     
@@ -94,7 +102,7 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados, dominados):
         d.text((pos_x_titulo + dx, pos_y_titulo + dy), texto_titulo, fill=(0, 0, 0, 255), font=font_principal)
     d.text((pos_x_titulo, pos_y_titulo), texto_titulo, fill=(255, 255, 255, 255), font=font_principal)
 
-    # CONTADOR DINÁMICO PROCEDURAL (Suma tanto obtenidos como dominados)
+    # CONTADOR DINÁMICO PROCEDURAL
     total_items = len(lista_ordenada_archivos)
     obtenidos_totales = sum(1 for f in lista_ordenada_archivos if (os.path.splitext(f)[0] in seleccionados) or (os.path.splitext(f)[0] in dominados))
     texto_progreso = f"{obtenidos_totales}/{total_items}"
@@ -112,7 +120,8 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados, dominados):
 
     img_corona = None
     if os.path.exists(CORONA_ICON_PATH):
-        img_corona = Image.open(CORONA_ICON_PATH).convert('RGBA').resize((26, 26))
+        # Hacemos la corona un poco más grande (32x32) para que destaque más
+        img_corona = Image.open(CORONA_ICON_PATH).convert('RGBA').resize((32, 32))
 
     for i, archivo in enumerate(lista_ordenada_archivos):
         ruta = os.path.join(IMG_FOLDER, archivo)
@@ -127,15 +136,15 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados, dominados):
         is_checked = nombre_base in seleccionados
         is_dom = nombre_base in dominados
         
-        # Un solo recuadro minimalista y centrado debajo de cada espíritu
-        d.rectangle([x + 22, y + 75, x + 48, y + 95], outline=(120, 120, 120), width=1)
-        
         if is_dom:
+            # Recuadro inferior dorado más visible
+            d.rectangle([x + 20, y + 73, x + 50, y + 97], fill=(50, 40, 0, 220), outline=(255, 215, 0), width=2)
             if img_corona:
-                img_final.paste(img_corona, (x + 22, y + 73), img_corona)
+                img_final.paste(img_corona, (x + 19, y + 70), img_corona)
             else:
-                d.text((x + 26, y + 76), "👑", fill=(255, 215, 0))
+                d.text((x + 24, y + 75), "👑", fill=(255, 215, 0))
         elif is_checked:
+            d.rectangle([x + 22, y + 75, x + 48, y + 95], outline=(120, 120, 120), width=1)
             if img_check:
                 img_final.paste(img_check, (x + 22, y + 73), img_check)
             else:
@@ -154,7 +163,6 @@ if os.path.exists(IMG_FOLDER):
 
     todos_los_ids = [os.path.splitext(f)[0] for f in archivos_ordenados]
 
-    # CONTROLES GLOBALES MAESTROS DIRECTOS (SIN TEXTO INNECESARIO)
     col_g1, col_g2, col_vacio = str_lit.columns([2, 2, 8])
 
     is_all_checked = all(id_esp in str_lit.session_state.seleccionados for id_esp in todos_los_ids)
@@ -189,7 +197,6 @@ if os.path.exists(IMG_FOLDER):
     for categoria, grupo in groupby(archivos_crudos, key=obtener_titulo_categoria):
         lista_grupo = list(grupo)
         
-        # Cabecera limpia de categoría
         str_lit.markdown(f"### {categoria.title()}")
         
         cols = str_lit.columns(5)
@@ -202,14 +209,11 @@ if os.path.exists(IMG_FOLDER):
             
             with cols[i % 5]:
                 str_lit.image(f"{IMG_FOLDER}/{archivo}", width=100)
-                
-                # Nombre del espíritu conservado claramente
                 str_lit.markdown(f"<div style='text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 5px;'>{nombre_mostrado}</div>", unsafe_allow_html=True)
                 
                 is_checked = nombre_base in str_lit.session_state.seleccionados
                 is_dom = nombre_base in str_lit.session_state.dominados
                 
-                # Controles web limpios para alternar entre obtenido y dominado individualmente
                 c_btn1, c_btn2 = str_lit.columns(2)
                 
                 with c_btn1:
