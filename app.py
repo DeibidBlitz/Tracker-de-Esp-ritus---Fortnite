@@ -18,6 +18,7 @@ MAPA_NOMBRES = {
     "12-PALITO_DE_PEZ-02_Palito-De_Pez_Dorado": "Palito De Pez Dorado",
     "12-PALITO_DE_PEZ-03_Palito-De_Pez_Golosina": "Palito De Pez Golosina",
     "12-PALITO_DE_PEZ-04_Palito-De_Pez_Galáctico": "Palito De Pez Galáctico",
+    "12-PALITO_DE_PEZ-05_Palito-De_Pez_Cubo": "Palito De Pez Cubo",
     "18-LOS_SIETE-01_Los_Siete_Normal": "Los Siete",
     "18-LOS_SIETE-02_Los_Siete_Dorado": "Los Siete Dorado",
     "18-LOS_SIETE-03_Los_Siete_Golosina": "Los Siete Golosina",
@@ -130,13 +131,11 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados, dominados):
         d.rectangle([x + 22, y + 75, x + 48, y + 95], outline=(120, 120, 120), width=1)
         
         if is_dom:
-            # Si está dominado, se muestra la corona limpia
             if img_corona:
                 img_final.paste(img_corona, (x + 22, y + 73), img_corona)
             else:
                 d.text((x + 26, y + 76), "👑", fill=(255, 215, 0))
         elif is_checked:
-            # Si solo está obtenido, se muestra el check verde
             if img_check:
                 img_final.paste(img_check, (x + 22, y + 73), img_check)
             else:
@@ -152,46 +151,46 @@ if os.path.exists(IMG_FOLDER):
     archivos_ordenados = []
     for categoria, grupo in groupby(archivos_crudos, key=obtener_titulo_categoria):
         archivos_ordenados.extend(list(grupo))
+
+    todos_los_ids = [os.path.splitext(f)[0] for f in archivos_ordenados]
+
+    # CONTROLES GLOBALES MAESTROS DIRECTOS (SIN TEXTO INNECESARIO)
+    col_g1, col_g2, col_vacio = str_lit.columns([2, 2, 8])
+
+    is_all_checked = all(id_esp in str_lit.session_state.seleccionados for id_esp in todos_los_ids)
+    is_all_dom = all(id_esp in str_lit.session_state.dominados for id_esp in todos_los_ids)
+
+    with col_g1:
+        def toggle_global_chk():
+            current_all = all(id_esp in str_lit.session_state.seleccionados for id_esp in todos_los_ids)
+            if current_all:
+                str_lit.session_state.seleccionados.clear()
+                str_lit.session_state.dominados.clear()
+            else:
+                for id_esp in todos_los_ids:
+                    str_lit.session_state.seleccionados.add(id_esp)
+
+        str_lit.checkbox("✅ Marcar Todos", value=is_all_checked, key="global_chk", on_change=toggle_global_chk)
+
+    with col_g2:
+        def toggle_global_dom():
+            current_all = all(id_esp in str_lit.session_state.dominados for id_esp in todos_los_ids)
+            if current_all:
+                str_lit.session_state.dominados.clear()
+            else:
+                for id_esp in todos_los_ids:
+                    str_lit.session_state.seleccionados.add(id_esp)
+                    str_lit.session_state.dominados.add(id_esp)
+
+        str_lit.checkbox("👑 Dominar Todos", value=is_all_dom, key="global_dom", on_change=toggle_global_dom)
+
+    str_lit.divider()
     
     for categoria, grupo in groupby(archivos_crudos, key=obtener_titulo_categoria):
         lista_grupo = list(grupo)
-        ids_grupo = [os.path.splitext(f)[0] for f in lista_grupo]
         
-        # Validar si todos están seleccionados o dominados en esta categoría
-        todos_seleccionados = all(id_esp in str_lit.session_state.seleccionados for id_esp in ids_grupo)
-        todos_dominados = all(id_esp in str_lit.session_state.dominados for id_esp in ids_grupo)
-        
-        # Diseño de cabecera de categoría con título y controles maestros independientes
-        col_tit, col_btn_chk, col_btn_dom = str_lit.columns([6, 3, 3])
-        
-        with col_tit:
-            str_lit.markdown(f"### {categoria.title()}")
-            
-        with col_btn_chk:
-            def toggle_cat_chk(ids=ids_grupo):
-                current_all = all(id_esp in str_lit.session_state.seleccionados for id_esp in ids)
-                if current_all:
-                    for id_esp in ids:
-                        str_lit.session_state.seleccionados.discard(id_esp)
-                        str_lit.session_state.dominados.discard(id_esp)
-                else:
-                    for id_esp in ids:
-                        str_lit.session_state.seleccionados.add(id_esp)
-
-            str_lit.checkbox("✅ Todos", value=todos_seleccionados, key=f"cat_chk_{categoria}", on_change=toggle_cat_chk)
-            
-        with col_btn_dom:
-            def toggle_cat_dom(ids=ids_grupo):
-                current_all = all(id_esp in str_lit.session_state.dominados for id_esp in ids)
-                if current_all:
-                    for id_esp in ids:
-                        str_lit.session_state.dominados.discard(id_esp)
-                else:
-                    for id_esp in ids:
-                        str_lit.session_state.seleccionados.add(id_esp) # Asegurar que estén seleccionados también
-                        str_lit.session_state.dominados.add(id_esp)
-
-            str_lit.checkbox("👑 Todos", value=todos_dominados, key=f"cat_dom_{categoria}", on_change=toggle_cat_dom)
+        # Cabecera limpia de categoría
+        str_lit.markdown(f"### {categoria.title()}")
         
         cols = str_lit.columns(5)
         
