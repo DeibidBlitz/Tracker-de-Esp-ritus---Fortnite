@@ -37,7 +37,6 @@ str_lit.set_page_config(
     page_title="Tracker de Espíritus", page_icon="✨", layout="wide"
 )
 
-# Inyectar CSS para la app y para ajustar el ancho del selectbox
 if os.path.exists(IMAGEN_FONDO_APP_PATH):
   import base64
 
@@ -54,7 +53,6 @@ if os.path.exists(IMAGEN_FONDO_APP_PATH):
         background-repeat: no-repeat;
         background-attachment: fixed;
     }}
-    /* Reducir el ancho del selectbox contenedor */
     div[data-baseweb="select"] {{
         max-width: 300px;
     }}
@@ -271,6 +269,14 @@ if os.path.exists(IMG_FOLDER):
     if cat not in categorias_disponibles:
       categorias_disponibles.append(cat)
 
+  # Mapeo de categoría a sus respectivos IDs de archivos
+  cat_to_ids = {}
+  for f in archivos_crudos:
+    cat = obtener_titulo_categoria(f)
+    if cat not in cat_to_ids:
+      cat_to_ids[cat] = []
+    cat_to_ids[cat].append(os.path.splitext(f)[0])
+
   # --- BARRA LATERAL ---
   with str_lit.sidebar:
     str_lit.header("⚙️ Opciones")
@@ -327,6 +333,65 @@ if os.path.exists(IMG_FOLDER):
         on_change=toggle_global_dom,
     )
     str_lit.markdown("---")
+
+    # --- MENÚS EXPANDIBLES (EXPANDER) PARA MARCAR / DOMINAR POR CATEGORÍA ---
+    with str_lit.expander("📌 Marcar por categoría"):
+      for cat in categorias_disponibles:
+        ids_cat = cat_to_ids[cat]
+        cat_checked_all = all(
+            id_esp in str_lit.session_state.seleccionados for id_esp in ids_cat
+        )
+
+        def make_toggle_cat_chk(c_ids):
+          def callback():
+            curr_all = all(
+                i in str_lit.session_state.seleccionados for i in c_ids
+            )
+            if curr_all:
+              for i in c_ids:
+                str_lit.session_state.seleccionados.discard(i)
+                str_lit.session_state.dominados.discard(i)
+            else:
+              for i in c_ids:
+                str_lit.session_state.seleccionados.add(i)
+
+          return callback
+
+        str_lit.checkbox(
+            f"{cat.title()}",
+            value=cat_checked_all,
+            key=f"exp_chk_{cat}",
+            on_change=make_toggle_cat_chk(ids_cat),
+        )
+
+    with str_lit.expander("👑 Dominar por categoría"):
+      for cat in categorias_disponibles:
+        ids_cat = cat_to_ids[cat]
+        cat_dom_all = all(
+            id_esp in str_lit.session_state.dominados for id_esp in ids_cat
+        )
+
+        def make_toggle_cat_dom(c_ids):
+          def callback():
+            curr_all = all(i in str_lit.session_state.dominados for i in c_ids)
+            if curr_all:
+              for i in c_ids:
+                str_lit.session_state.dominados.discard(i)
+            else:
+              for i in c_ids:
+                str_lit.session_state.seleccionados.add(i)
+                str_lit.session_state.dominados.add(i)
+
+          return callback
+
+        str_lit.checkbox(
+            f"{cat.title()}",
+            value=cat_dom_all,
+            key=f"exp_dom_{cat}",
+            on_change=make_toggle_cat_dom(ids_cat),
+        )
+
+    str_lit.markdown("---")
     str_lit.info("Marca tus progresos y genera tu tarjeta abajo.")
 
   # --- CONTENIDO PRINCIPAL ---
@@ -350,7 +415,6 @@ if os.path.exists(IMG_FOLDER):
 
   str_lit.markdown("---")
 
-  # --- MENÚ DESPLEGABLE MÁS COMPACTO ALINEADO A LA DERECHA ---
   col_izq, col_der1, col_der2 = str_lit.columns([2, 1, 1])
   with col_der2:
     opciones_menu = ["Todos"] + [cat.title() for cat in categorias_disponibles]
