@@ -261,9 +261,12 @@ if os.path.exists(IMG_FOLDER):
 
   todos_los_ids = [os.path.splitext(f)[0] for f in archivos_ordenados]
 
-  categorias_disponibles = sorted(
-      list(set(obtener_titulo_categoria(f) for f in archivos_crudos))
-  )
+  # Mantener el orden estricto original en lugar de orden alfabético
+  categorias_disponibles = []
+  for f in archivos_crudos:
+    cat = obtener_titulo_categoria(f)
+    if cat not in categorias_disponibles:
+      categorias_disponibles.append(cat)
 
   # --- BARRA LATERAL ---
   with str_lit.sidebar:
@@ -344,7 +347,7 @@ if os.path.exists(IMG_FOLDER):
 
   str_lit.markdown("---")
 
-  # --- MENÚ DESPLEGABLE CON ICONO DE DIANA (🎯) Y TEXTO VISIBLE ALINEADO A LA DERECHA ---
+  # --- MENÚ DESPLEGABLE CON LAS CATEGORÍAS ORDENADAS SEGÚN LOS ARCHIVOS ---
   col_izq, col_der = str_lit.columns([2, 2])
   with col_der:
     opciones_menu = ["Todos"] + [cat.title() for cat in categorias_disponibles]
