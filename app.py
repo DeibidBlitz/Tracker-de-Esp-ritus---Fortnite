@@ -37,7 +37,7 @@ str_lit.set_page_config(
     page_title="Tracker de Espíritus", page_icon="✨", layout="wide"
 )
 
-# Inyectar CSS con llaves escapadas correctamente ({{ y }})[cite: 1]
+# Inyectar CSS para la app y para ajustar el ancho del selectbox
 if os.path.exists(IMAGEN_FONDO_APP_PATH):
   import base64
 
@@ -53,6 +53,10 @@ if os.path.exists(IMAGEN_FONDO_APP_PATH):
         background-position: center;
         background-repeat: no-repeat;
         background-attachment: fixed;
+    }}
+    /* Reducir el ancho del selectbox contenedor */
+    div[data-baseweb="select"] {{
+        max-width: 300px;
     }}
     </style>
     """
@@ -261,7 +265,6 @@ if os.path.exists(IMG_FOLDER):
 
   todos_los_ids = [os.path.splitext(f)[0] for f in archivos_ordenados]
 
-  # Mantener el orden estricto original en lugar de orden alfabético
   categorias_disponibles = []
   for f in archivos_crudos:
     cat = obtener_titulo_categoria(f)
@@ -347,9 +350,9 @@ if os.path.exists(IMG_FOLDER):
 
   str_lit.markdown("---")
 
-  # --- MENÚ DESPLEGABLE CON LAS CATEGORÍAS ORDENADAS SEGÚN LOS ARCHIVOS ---
-  col_izq, col_der = str_lit.columns([2, 2])
-  with col_der:
+  # --- MENÚ DESPLEGABLE MÁS COMPACTO ALINEADO A LA DERECHA ---
+  col_izq, col_der1, col_der2 = str_lit.columns([2, 1, 1])
+  with col_der2:
     opciones_menu = ["Todos"] + [cat.title() for cat in categorias_disponibles]
     categoria_seleccionada = str_lit.selectbox(
         "🎯 Filtrar por categoría",
