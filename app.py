@@ -15,6 +15,10 @@ MAPA_NOMBRES = {
     "11-PUNTO_CERO-02_Punto-Cero_Dorado": "Punto Cero Dorado",
     "11-PUNTO_CERO-03_Punto-Cero_Golosina": "Punto Cero Golosina",
     "11-PUNTO_CERO-04_Punto-Cero_Galáctico": "Punto Cero Galáctico",
+    "11-PUNTO_CERO-05_Punto-Cero_Holo": "Punto Cero Holo",
+    "11-PUNTO_CERO-06_Punto-Cero_Cubo": "Punto Cero Cubo",
+    "11-PUNTO_CERO-07_Punto-Cero_Patito": "Punto Cero Patito",
+    "11-PUNTO_CERO-08_Punto-Cero_Gema": "Punto Cero Gema",
     "12-PALITO_DE_PEZ-01_Palito-De_Pez_Normal": "Palito De Pez",
     "12-PALITO_DE_PEZ-02_Palito-De_Pez_Dorado": "Palito De Pez Dorado",
     "12-PALITO_DE_PEZ-03_Palito-De_Pez_Golosina": "Palito De Pez Golosina",
@@ -26,6 +30,7 @@ MAPA_NOMBRES = {
     "18-LOS_SIETE-04_Los_Siete_Galáctico": "Los Siete Galáctico",
     "18-LOS_SIETE-05_Los_Siete_Holo": "Los Siete Holo",
     "20-VINI_JR-01_Vini_Jr_Normal": "Vini Jr",
+    "22-JOHN_WICK-01_John_Wick_Normal": "John Wick",
 }
 
 str_lit.set_page_config(
