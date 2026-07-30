@@ -37,7 +37,7 @@ str_lit.set_page_config(
     page_title="Tracker de Espíritus", page_icon="✨", layout="wide"
 )
 
-# Inyectar CSS con llaves escapadas correctamente ({{ y }})
+# Inyectar CSS con llaves escapadas correctamente ({{ y }})[cite: 1]
 if os.path.exists(IMAGEN_FONDO_APP_PATH):
   import base64
 
@@ -261,6 +261,10 @@ if os.path.exists(IMG_FOLDER):
 
   todos_los_ids = [os.path.splitext(f)[0] for f in archivos_ordenados]
 
+  categorias_disponibles = sorted(
+      list(set(obtener_titulo_categoria(f) for f in archivos_crudos))
+  )
+
   # --- BARRA LATERAL ---
   with str_lit.sidebar:
     str_lit.header("⚙️ Opciones")
@@ -339,9 +343,26 @@ if os.path.exists(IMG_FOLDER):
     str_lit.metric(label="Dominados (100%)", value=dominados_count)
 
   str_lit.markdown("---")
+
+  # --- MENÚ DESPLEGABLE CON ICONO DE DIANA (🎯) Y TEXTO VISIBLE ALINEADO A LA DERECHA ---
+  col_izq, col_der = str_lit.columns([2, 2])
+  with col_der:
+    opciones_menu = ["Todos"] + [cat.title() for cat in categorias_disponibles]
+    categoria_seleccionada = str_lit.selectbox(
+        "🎯 Filtrar por categoría",
+        opciones_menu,
+        label_visibility="visible",
+    )
+
   str_lit.subheader("📋 Lista de Colección")
 
   for categoria, grupo in groupby(archivos_crudos, key=obtener_titulo_categoria):
+    if (
+        categoria_seleccionada != "Todos"
+        and categoria.title() != categoria_seleccionada
+    ):
+      continue
+
     lista_grupo = list(grupo)
 
     grupo_filtrado = []
