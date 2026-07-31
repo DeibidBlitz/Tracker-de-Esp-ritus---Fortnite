@@ -74,7 +74,9 @@ def obtener_titulo_categoria(nombre_archivo):
   return nombre_archivo.split("-")[1].replace("_", " ")
 
 
-def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados, dominados):
+def generar_imagen_coleccion(
+    lista_ordenada_archivos, seleccionados, dominados, titulo_personalizado=None
+):
   columnas = 10
   ancho_celda = 90
   alto_celda = 110
@@ -132,7 +134,11 @@ def generar_imagen_coleccion(lista_ordenada_archivos, seleccionados, dominados):
 
   d = ImageDraw.Draw(img_final)
 
-  texto_titulo = "MI COLECCIÓN DE ESPÍRITUS"
+  texto_titulo = (
+      titulo_personalizado
+      if titulo_personalizado
+      else "MI COLECCIÓN DE ESPÍRITUS"
+  )
   pos_x_titulo = padding_lateral + 20
   pos_y_titulo = 25
 
@@ -269,12 +275,14 @@ if os.path.exists(IMG_FOLDER):
     if cat not in categorias_disponibles:
       categorias_disponibles.append(cat)
 
-  # Mapeo de categoría a sus respectivos IDs de archivos
+  cat_to_archivos = {}
   cat_to_ids = {}
   for f in archivos_crudos:
     cat = obtener_titulo_categoria(f)
-    if cat not in cat_to_ids:
+    if cat not in cat_to_archivos:
+      cat_to_archivos[cat] = []
       cat_to_ids[cat] = []
+    cat_to_archivos[cat].append(f)
     cat_to_ids[cat].append(os.path.splitext(f)[0])
 
   # --- BARRA LATERAL ---
@@ -334,7 +342,6 @@ if os.path.exists(IMG_FOLDER):
     )
     str_lit.markdown("---")
 
-    # --- MENÚS EXPANDIBLES (EXPANDER) PARA MARCAR / DOMINAR POR CATEGORÍA ---
     with str_lit.expander("📌 Marcar por categoría"):
       for cat in categorias_disponibles:
         ids_cat = cat_to_ids[cat]
@@ -507,8 +514,9 @@ if os.path.exists(IMG_FOLDER):
             )
 
   str_lit.markdown("---")
-  str_lit.subheader("🖼️ Generar Tarjeta de Colección")
+  str_lit.subheader("🖼️ Generar Tarjetas de Colección")
 
+  # Sección de Descarga General
   if str_lit.session_state.seleccionados or str_lit.session_state.dominados:
     img_bytes = generar_imagen_coleccion(
         archivos_ordenados,
@@ -516,12 +524,71 @@ if os.path.exists(IMG_FOLDER):
         str_lit.session_state.dominados,
     )
     str_lit.download_button(
-        label="📥 Crear y Descargar Imagen de Colección",
+        label="📥 Crear y Descargar Imagen de Colección (General)",
         data=img_bytes,
         file_name="catalogo_espiritus.png",
         mime="image/png",
     )
   else:
-    str_lit.info("Selecciona algunos espíritus para poder descargar la imagen.")
+    str_lit.info(
+        "Selecciona algunos espíritus para poder descargar la imagen general."
+    )
+
+  # Sección de Descarga Múltiple por Categorías en un Menú Plegable
+  str_lit.markdown("---")
+  with str_lit.expander("📥 Descarga Múltiple por Categorías"):
+    str_lit.markdown(
+        "Selecciona las categorías que deseas incluir en tu tarjeta personalizada"
+        " (recuerda que al menos una de las categorías seleccionadas debe tener"
+        " espíritus marcados o dominados)."
+    )
+
+    categorias_seleccionadas_multi = []
+    for cat in categorias_disponibles:
+      if str_lit.checkbox(
+          f"{cat.title()}", key=f"desc_multi_{cat}"
+      ):
+        categorias_seleccionadas_multi.append(cat)
+
+    if categorias_seleccionadas_multi:
+      # Juntar los archivos de las categorías seleccionadas
+      archivos_multi_filtrados = []
+      for c in categorias_seleccionadas_multi:
+        archivos_multi_filtrados.extend(cat_to_archivos[c])
+
+      # Validar que al menos haya un espíritu obtenido o dominado en el conjunto seleccionado
+      tiene_progreso_multi = any(
+          os.path.splitext(f)[0] in str_lit.session_state.seleccionados
+          or os.path.splitext(f)[0] in str_lit.session_state.dominados
+          for f in archivos_multi_filtrados
+      )
+
+      if tiene_progreso_multi:
+        nombres_cats_str = ", ".join(
+            [c.title() for c in categorias_seleccionadas_multi]
+        )
+        img_bytes_multi = generar_imagen_coleccion(
+            archivos_multi_filtrados,
+            str_lit.session_state.seleccionados,
+            str_lit.session_state.dominados,
+            titulo_personalizado=f"CATEGORÍAS: {nombres_cats_str.upper()}",
+        )
+        str_lit.download_button(
+            label="📥 Descargar Tarjeta de Categorías Seleccionadas",
+            data=img_bytes_multi,
+            file_name="catalogo_categorias_seleccionadas.png",
+            mime="image/png",
+        )
+      else:
+        str_lit.warning(
+            "Las categorías seleccionadas no tienen ningún espíritu obtenido"
+            " o dominado todavía."
+        )
+    else:
+      str_lit.info(
+          "Selecciona al menos una categoría en el menú de arriba para"
+          " habilitar la descarga."
+      )
+
 else:
   str_lit.warning("Aún no he encontrado la carpeta de imágenes.")
