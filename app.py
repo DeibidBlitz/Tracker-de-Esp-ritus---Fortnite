@@ -418,7 +418,13 @@ if os.path.exists(IMG_FOLDER):
   with col_m2:
     str_lit.metric(label="Obtenidos", value=obtenidos_count)
   with col_m3:
-    str_lit.metric(label="Dominados (100%)", value=dominados_count)
+    # Cálculo correcto del porcentaje basado en el total de espíritus reales
+    porcentaje_dominados = (
+        (dominados_count / total_espiritus) * 100 if total_espiritus > 0 else 0
+    )
+    str_lit.metric(
+        label=f"Dominados ({porcentaje_dominados:.1f}%)", value=dominados_count
+    )
 
   str_lit.markdown("---")
 
@@ -551,12 +557,10 @@ if os.path.exists(IMG_FOLDER):
         categorias_seleccionadas_multi.append(cat)
 
     if categorias_seleccionadas_multi:
-      # Juntar los archivos de las categorías seleccionadas
       archivos_multi_filtrados = []
       for c in categorias_seleccionadas_multi:
         archivos_multi_filtrados.extend(cat_to_archivos[c])
 
-      # Validar que al menos haya un espíritu obtenido o dominado en el conjunto seleccionado
       tiene_progreso_multi = any(
           os.path.splitext(f)[0] in str_lit.session_state.seleccionados
           or os.path.splitext(f)[0] in str_lit.session_state.dominados
