@@ -75,7 +75,11 @@ def obtener_titulo_categoria(nombre_archivo):
 
 
 def generar_imagen_coleccion(
-    lista_ordenada_archivos, seleccionados, dominados, titulo_personalizado=None
+    lista_ordenada_archivos,
+    seleccionados,
+    dominados,
+    titulo_personalizado=None,
+    usar_fondo_app=False,
 ):
   columnas = 10
   ancho_celda = 90
@@ -89,8 +93,14 @@ def generar_imagen_coleccion(
   ancho_total = (columnas * ancho_celda) + (padding_lateral * 2)
   alto_total = (filas * alto_celda) + padding_superior + 20
 
-  if os.path.exists(IMAGEN_FONDO_EXPORT_PATH):
-    fondo_original = Image.open(IMAGEN_FONDO_EXPORT_PATH).convert("RGBA")
+  ruta_fondo = (
+      IMAGEN_FONDO_APP_PATH
+      if usar_fondo_app and os.path.exists(IMAGEN_FONDO_APP_PATH)
+      else IMAGEN_FONDO_EXPORT_PATH
+  )
+
+  if os.path.exists(ruta_fondo):
+    fondo_original = Image.open(ruta_fondo).convert("RGBA")
     img_final = fondo_original.resize((ancho_total, alto_total))
   else:
     img_final = Image.new(
@@ -418,7 +428,6 @@ if os.path.exists(IMG_FOLDER):
   with col_m2:
     str_lit.metric(label="Obtenidos", value=obtenidos_count)
   with col_m3:
-    # Cálculo correcto del porcentaje basado en el total de espíritus reales
     porcentaje_dominados = (
         (dominados_count / total_espiritus) * 100 if total_espiritus > 0 else 0
     )
@@ -528,6 +537,7 @@ if os.path.exists(IMG_FOLDER):
         archivos_ordenados,
         str_lit.session_state.seleccionados,
         str_lit.session_state.dominados,
+        usar_fondo_app=False,
     )
     str_lit.download_button(
         label="📥 Crear y Descargar Imagen de Colección (General)",
@@ -540,7 +550,7 @@ if os.path.exists(IMG_FOLDER):
         "Selecciona algunos espíritus para poder descargar la imagen general."
     )
 
-  # Sección de Descarga Múltiple por Categorías en un Menú Plegable
+  # Sección de Descarga Múltiple por Categorías
   str_lit.markdown("---")
   with str_lit.expander("📥 Descarga Múltiple por Categorías"):
     str_lit.markdown(
@@ -551,9 +561,7 @@ if os.path.exists(IMG_FOLDER):
 
     categorias_seleccionadas_multi = []
     for cat in categorias_disponibles:
-      if str_lit.checkbox(
-          f"{cat.title()}", key=f"desc_multi_{cat}"
-      ):
+      if str_lit.checkbox(f"{cat.title()}", key=f"desc_multi_{cat}"):
         categorias_seleccionadas_multi.append(cat)
 
     if categorias_seleccionadas_multi:
@@ -576,6 +584,7 @@ if os.path.exists(IMG_FOLDER):
             str_lit.session_state.seleccionados,
             str_lit.session_state.dominados,
             titulo_personalizado=f"CATEGORÍAS: {nombres_cats_str.upper()}",
+            usar_fondo_app=True,
         )
         str_lit.download_button(
             label="📥 Descargar Tarjeta de Categorías Seleccionadas",
@@ -593,6 +602,61 @@ if os.path.exists(IMG_FOLDER):
           "Selecciona al menos una categoría en el menú de arriba para"
           " habilitar la descarga."
       )
+
+  # Sección de Descarga de Espíritus Individuales
+  with str_lit.expander("📥 Descarga de Espíritus Individuales (Libre)"):
+    str_lit.markdown(
+        "Selecciona espíritus específicos de cualquier categoría para generar"
+        " tu tarjeta personalizada (puedes elegir los que gustes)."
+    )
+
+    espiritus_individuales_seleccionados = []
+    for cat in categorias_disponibles:
+      str_lit.markdown(f"**{cat.title()}**")
+      for archivo in cat_to_archivos[cat]:
+        nombre_base = os.path.splitext(archivo)[0]
+        nombre_crudo = MAPA_NOMBRES.get(
+            nombre_base,
+            nombre_base.split("_", 1)[-1]
+            .replace("-", " ")
+            .replace("_", " ")
+            .title(),
+        )
+        nombre_mostrado = nombre_crudo.replace("Normal", "").strip()
+
+        if str_lit.checkbox(
+            f"{nombre_mostrado}", key=f"indiv_down_{nombre_base}"
+        ):
+          espiritus_individuales_seleccionados.append(archivo)
+
+    if espiritus_individuales_seleccionados:
+      tiene_progreso_indiv = any(
+          os.path.splitext(f)[0] in str_lit.session_state.seleccionados
+          or os.path.splitext(f)[0] in str_lit.session_state.dominados
+          for f in espiritus_individuales_seleccionados
+      )
+
+      if tiene_progreso_indiv:
+        img_bytes_indiv = generar_imagen_coleccion(
+            espiritus_individuales_seleccionados,
+            str_lit.session_state.seleccionados,
+            str_lit.session_state.dominados,
+            titulo_personalizado="SELECCIÓN PERSONALIZADA",
+            usar_fondo_app=True,
+        )
+        str_lit.download_button(
+            label="📥 Descargar Tarjeta de Espíritus Seleccionados",
+            data=img_bytes_indiv,
+            file_name="catalogo_personalizado.png",
+            mime="image/png",
+        )
+      else:
+        str_lit.warning(
+            "Los espíritus seleccionados no están marcados como obtenidos o"
+            " dominados."
+        )
+    else:
+      str_lit.info("Selecciona al menos un espíritu para generar la tarjeta.")
 
 else:
   str_lit.warning("Aún no he encontrado la carpeta de imágenes.")
