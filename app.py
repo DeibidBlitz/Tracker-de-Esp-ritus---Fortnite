@@ -603,7 +603,7 @@ if os.path.exists(IMG_FOLDER):
           " habilitar la descarga."
       )
 
-  # Sección de Descarga de Espíritus Individuales
+  # Sección de Descarga de Espíritus Individuales (Corregido para validar contra todos los ids disponibles sin filtro estricto de obtenidos)
   with str_lit.expander("📥 Descarga de Espíritus Individuales (Libre)"):
     str_lit.markdown(
         "Selecciona espíritus específicos de cualquier categoría para generar"
@@ -630,31 +630,20 @@ if os.path.exists(IMG_FOLDER):
           espiritus_individuales_seleccionados.append(archivo)
 
     if espiritus_individuales_seleccionados:
-      tiene_progreso_indiv = any(
-          os.path.splitext(f)[0] in str_lit.session_state.seleccionados
-          or os.path.splitext(f)[0] in str_lit.session_state.dominados
-          for f in espiritus_individuales_seleccionados
+      # Se eliminó la validación estricta de que debían estar obligatoriamente en obtenidos/dominados para permitir descargar los nuevos espíritus agregados libremente
+      img_bytes_indiv = generar_imagen_coleccion(
+          espiritus_individuales_seleccionados,
+          str_lit.session_state.seleccionados,
+          str_lit.session_state.dominados,
+          titulo_personalizado="SELECCIÓN PERSONALIZADA",
+          usar_fondo_app=True,
       )
-
-      if tiene_progreso_indiv:
-        img_bytes_indiv = generar_imagen_coleccion(
-            espiritus_individuales_seleccionados,
-            str_lit.session_state.seleccionados,
-            str_lit.session_state.dominados,
-            titulo_personalizado="SELECCIÓN PERSONALIZADA",
-            usar_fondo_app=True,
-        )
-        str_lit.download_button(
-            label="📥 Descargar Tarjeta de Espíritus Seleccionados",
-            data=img_bytes_indiv,
-            file_name="catalogo_personalizado.png",
-            mime="image/png",
-        )
-      else:
-        str_lit.warning(
-            "Los espíritus seleccionados no están marcados como obtenidos o"
-            " dominados."
-        )
+      str_lit.download_button(
+          label="📥 Descargar Tarjeta de Espíritus Seleccionados",
+          data=img_bytes_indiv,
+          file_name="catalogo_personalizado.png",
+          mime="image/png",
+      )
     else:
       str_lit.info("Selecciona al menos un espíritu para generar la tarjeta.")
 
