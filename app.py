@@ -136,8 +136,8 @@ def generar_imagen_coleccion(
 
   ruta_fuente = os.path.join(IMG_FOLDER, "BURBANK.ttf")
   try:
-    font_principal = ImageFont.truetype(ruta_fuente, 32)
-    font_contador = ImageFont.truetype(ruta_fuente, 30)
+    font_principal = ImageFont.truetype(ruta_fuente, 28)
+    font_contador = ImageFont.truetype(ruta_fuente, 22)
   except IOError:
     font_principal = ImageFont.load_default()
     font_contador = ImageFont.load_default()
@@ -149,8 +149,8 @@ def generar_imagen_coleccion(
       if titulo_personalizado
       else "MI COLECCIÓN DE ESPÍRITUS"
   )
-  pos_x_titulo = padding_lateral + 20
-  pos_y_titulo = 25
+  pos_x_titulo = padding_lateral + 15
+  pos_y_titulo = 28
 
   for dx, dy in [
       (-2, 0),
@@ -179,37 +179,75 @@ def generar_imagen_coleccion(
   obtenidos_totales = sum(
       1
       for f in lista_ordenada_archivos
-      if (os.path.splitext(f)[0] in seleccionados)
-      or (os.path.splitext(f)[0] in dominados)
+      if os.path.splitext(f)[0] in seleccionados
   )
-  texto_progreso = f"{obtenidos_totales}/{total_items}"
+  dominados_totales = sum(
+      1 for f in lista_ordenada_archivos if os.path.splitext(f)[0] in dominados
+  )
 
-  pos_x_texto = ancho_total - padding_lateral - 120
-  pos_y_texto = 28
+  # --- DIBUJAR CONTADORES E ICONOS PERSONALIZADOS EN EL BANNER ---
+  # Coordenada base inicial desde la derecha para alinear de forma fluida
+  pos_x_base = ancho_total - padding_lateral - 215
+  pos_y_iconos = 32
+  pos_y_texto = 33
 
-  for dx, dy in [
-      (-2, 0),
-      (2, 0),
-      (0, -2),
-      (0, 2),
-      (-2, -2),
-      (2, 2),
-      (-2, 2),
-      (2, -2),
-  ]:
-    d.text(
-        (pos_x_texto + dx, pos_y_texto + dy),
-        texto_progreso,
-        fill=(0, 0, 0, 255),
-        font=font_contador,
+  # Cargar iconos gráficos en miniatura para el banner
+  img_check_mini = None
+  if os.path.exists(CHECK_ICON_PATH):
+    img_check_mini = (
+        Image.open(CHECK_ICON_PATH).convert("RGBA").resize((22, 22))
     )
+
+  img_corona_mini = None
+  if os.path.exists(CORONA_ICON_PATH):
+    img_corona_mini = (
+        Image.open(CORONA_ICON_PATH).convert("RGBA").resize((24, 24))
+    )
+
+  # 1. Pintar icono de check o texto alternativo
+  current_x = pos_x_base
+  if img_check_mini:
+    img_final.paste(img_check_mini, (current_x, pos_y_iconos), img_check_mini)
+    current_x += 26
+  else:
+    d.text((current_x, pos_y_texto), "✓", fill=(0, 255, 120), font=font_contador)
+    current_x += 20
+
+  # 2. Pintar texto de obtenidos
+  texto_obt = f"{obtenidos_totales}/{total_items}"
   d.text(
-      (pos_x_texto, pos_y_texto),
-      texto_progreso,
-      fill=(0, 255, 120, 255),
+      (current_x, pos_y_texto), texto_obt, fill=(255, 255, 255), font=font_contador
+  )
+  current_x += 70  # Espacio para el texto + barra diagonal
+
+  # 3. Pintar barra diagonal separadora
+  d.text(
+      (current_x, pos_y_texto),
+      "/",
+      fill=(150, 150, 150),
       font=font_contador,
   )
+  current_x += 20
 
+  # 4. Pintar icono de corona o texto alternativo
+  if img_corona_mini:
+    img_final.paste(
+        img_corona_mini, (current_x, pos_y_iconos - 2), img_corona_mini
+    )
+    current_x += 28
+  else:
+    d.text(
+        (current_x, pos_y_texto), "👑", fill=(255, 215, 0), font=font_contador
+    )
+    current_x += 25
+
+  # 5. Pintar texto de dominados
+  texto_dom = f"{dominados_totales}/{total_items}"
+  d.text(
+      (current_x, pos_y_texto), texto_dom, fill=(255, 255, 255), font=font_contador
+  )
+
+  # Cargar iconos normales para las celdas de los espíritus
   img_check = None
   if os.path.exists(CHECK_ICON_PATH):
     img_check = Image.open(CHECK_ICON_PATH).convert("RGBA").resize((26, 26))
@@ -260,7 +298,7 @@ if os.path.exists(IMG_FOLDER):
   archivos_crudos = sorted([
       f
       for f in os.listdir(IMG_FOLDER)
-      if f.endswith(".png")
+      if f.lower().endswith(".png")
       and not f.startswith("num_")
       and f
       not in [
@@ -437,8 +475,15 @@ if os.path.exists(IMG_FOLDER):
 
   str_lit.markdown("---")
 
-  col_izq, col_der1, col_der2 = str_lit.columns([2, 1, 1])
-  with col_der2:
+  # --- FILTROS Y BUSCADOR ---
+  col_busqueda, col_cat = str_lit.columns([2, 2])
+  with col_busqueda:
+    busqueda_texto = str_lit.text_input(
+        "🔍 Buscar espíritu por nombre",
+        value="",
+        placeholder="Escribe el nombre del espíritu...",
+    )
+  with col_cat:
     opciones_menu = ["Todos"] + [cat.title() for cat in categorias_disponibles]
     categoria_seleccionada = str_lit.selectbox(
         "🎯 Filtrar por categoría",
@@ -466,6 +511,24 @@ if os.path.exists(IMG_FOLDER):
         continue
       if filtro_vista == "Dominados" and not is_dom:
         continue
+
+      # Filtro del buscador por nombre
+      nombre_crudo = MAPA_NOMBRES.get(
+          nombre_base,
+          nombre_base.split("_", 1)[-1]
+          .replace("-", " ")
+          .replace("_", " ")
+          .title(),
+      )
+      nombre_mostrado = nombre_crudo.replace("Normal", "").strip()
+
+      if (
+          busqueda_texto
+          and busqueda_texto.lower() not in nombre_mostrado.lower()
+          and busqueda_texto.lower() not in nombre_base.lower()
+      ):
+        continue
+
       grupo_filtrado.append(archivo)
 
     if not grupo_filtrado:
@@ -532,7 +595,7 @@ if os.path.exists(IMG_FOLDER):
   str_lit.subheader("🖼️ Generar Tarjetas de Colección")
 
   # Sección de Descarga General
-  if str_lit.session_state.seleccionados or str_lit.session_state.dominados:
+  if archivos_ordenados:
     img_bytes = generar_imagen_coleccion(
         archivos_ordenados,
         str_lit.session_state.seleccionados,
@@ -546,17 +609,13 @@ if os.path.exists(IMG_FOLDER):
         mime="image/png",
     )
   else:
-    str_lit.info(
-        "Selecciona algunos espíritus para poder descargar la imagen general."
-    )
+    str_lit.info("No hay espíritus disponibles para descargar.")
 
   # Sección de Descarga Múltiple por Categorías
   str_lit.markdown("---")
   with str_lit.expander("📥 Descarga Múltiple por Categorías"):
     str_lit.markdown(
-        "Selecciona las categorías que deseas incluir en tu tarjeta personalizada"
-        " (recuerda que al menos una de las categorías seleccionadas debe tener"
-        " espíritus marcados o dominados)."
+        "Selecciona las categorías que deseas incluir en tu tarjeta personalizada."
     )
 
     categorias_seleccionadas_multi = []
@@ -569,45 +628,33 @@ if os.path.exists(IMG_FOLDER):
       for c in categorias_seleccionadas_multi:
         archivos_multi_filtrados.extend(cat_to_archivos[c])
 
-      tiene_progreso_multi = any(
-          os.path.splitext(f)[0] in str_lit.session_state.seleccionados
-          or os.path.splitext(f)[0] in str_lit.session_state.dominados
-          for f in archivos_multi_filtrados
+      nombres_cats_str = ", ".join(
+          [c.title() for c in categorias_seleccionadas_multi]
       )
-
-      if tiene_progreso_multi:
-        nombres_cats_str = ", ".join(
-            [c.title() for c in categorias_seleccionadas_multi]
-        )
-        img_bytes_multi = generar_imagen_coleccion(
-            archivos_multi_filtrados,
-            str_lit.session_state.seleccionados,
-            str_lit.session_state.dominados,
-            titulo_personalizado=f"CATEGORÍAS: {nombres_cats_str.upper()}",
-            usar_fondo_app=True,
-        )
-        str_lit.download_button(
-            label="📥 Descargar Tarjeta de Categorías Seleccionadas",
-            data=img_bytes_multi,
-            file_name="catalogo_categorias_seleccionadas.png",
-            mime="image/png",
-        )
-      else:
-        str_lit.warning(
-            "Las categorías seleccionadas no tienen ningún espíritu obtenido"
-            " o dominado todavía."
-        )
+      img_bytes_multi = generar_imagen_coleccion(
+          archivos_multi_filtrados,
+          str_lit.session_state.seleccionados,
+          str_lit.session_state.dominados,
+          titulo_personalizado=f"CATEGORÍAS: {nombres_cats_str.upper()}",
+          usar_fondo_app=True,
+      )
+      str_lit.download_button(
+          label="📥 Descargar Tarjeta de Categorías Seleccionadas",
+          data=img_bytes_multi,
+          file_name="catalogo_categorias_seleccionadas.png",
+          mime="image/png",
+      )
     else:
       str_lit.info(
           "Selecciona al menos una categoría en el menú de arriba para"
           " habilitar la descarga."
       )
 
-  # Sección de Descarga de Espíritus Individuales (Corregido para validar contra todos los ids disponibles sin filtro estricto de obtenidos)
+  # Sección de Descarga de Espíritus Individuales
   with str_lit.expander("📥 Descarga de Espíritus Individuales (Libre)"):
     str_lit.markdown(
         "Selecciona espíritus específicos de cualquier categoría para generar"
-        " tu tarjeta personalizada (puedes elegir los que gustes)."
+        " tu tarjeta personalizada."
     )
 
     espiritus_individuales_seleccionados = []
@@ -630,7 +677,6 @@ if os.path.exists(IMG_FOLDER):
           espiritus_individuales_seleccionados.append(archivo)
 
     if espiritus_individuales_seleccionados:
-      # Se eliminó la validación estricta de que debían estar obligatoriamente en obtenidos/dominados para permitir descargar los nuevos espíritus agregados libremente
       img_bytes_indiv = generar_imagen_coleccion(
           espiritus_individuales_seleccionados,
           str_lit.session_state.seleccionados,
