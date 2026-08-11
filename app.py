@@ -80,6 +80,7 @@ def generar_imagen_coleccion(
     dominados,
     titulo_personalizado=None,
     usar_fondo_app=False,
+    imagen_custom=None,
 ):
   columnas = 10
   ancho_celda = 90
@@ -99,7 +100,11 @@ def generar_imagen_coleccion(
       else IMAGEN_FONDO_EXPORT_PATH
   )
 
-  if os.path.exists(ruta_fondo):
+  # Carga de la imagen de fondo: prioriza la subida por el usuario
+  if imagen_custom is not None:
+    fondo_original = Image.open(imagen_custom).convert("RGBA")
+    img_final = fondo_original.resize((ancho_total, alto_total))
+  elif os.path.exists(ruta_fondo):
     fondo_original = Image.open(ruta_fondo).convert("RGBA")
     img_final = fondo_original.resize((ancho_total, alto_total))
   else:
@@ -185,13 +190,10 @@ def generar_imagen_coleccion(
       1 for f in lista_ordenada_archivos if os.path.splitext(f)[0] in dominados
   )
 
-  # --- DIBUJAR CONTADORES E ICONOS PERSONALIZADOS EN EL BANNER ---
-  # Coordenada base inicial desde la derecha para alinear de forma fluida
   pos_x_base = ancho_total - padding_lateral - 215
   pos_y_iconos = 32
   pos_y_texto = 33
 
-  # Cargar iconos gráficos en miniatura para el banner
   img_check_mini = None
   if os.path.exists(CHECK_ICON_PATH):
     img_check_mini = (
@@ -204,7 +206,6 @@ def generar_imagen_coleccion(
         Image.open(CORONA_ICON_PATH).convert("RGBA").resize((24, 24))
     )
 
-  # 1. Pintar icono de check o texto alternativo
   current_x = pos_x_base
   if img_check_mini:
     img_final.paste(img_check_mini, (current_x, pos_y_iconos), img_check_mini)
@@ -213,14 +214,12 @@ def generar_imagen_coleccion(
     d.text((current_x, pos_y_texto), "✓", fill=(0, 255, 120), font=font_contador)
     current_x += 20
 
-  # 2. Pintar texto de obtenidos
   texto_obt = f"{obtenidos_totales}/{total_items}"
   d.text(
       (current_x, pos_y_texto), texto_obt, fill=(255, 255, 255), font=font_contador
   )
-  current_x += 70  # Espacio para el texto + barra diagonal
+  current_x += 70
 
-  # 3. Pintar barra diagonal separadora
   d.text(
       (current_x, pos_y_texto),
       "/",
@@ -229,7 +228,6 @@ def generar_imagen_coleccion(
   )
   current_x += 20
 
-  # 4. Pintar icono de corona o texto alternativo
   if img_corona_mini:
     img_final.paste(
         img_corona_mini, (current_x, pos_y_iconos - 2), img_corona_mini
@@ -241,13 +239,11 @@ def generar_imagen_coleccion(
     )
     current_x += 25
 
-  # 5. Pintar texto de dominados
   texto_dom = f"{dominados_totales}/{total_items}"
   d.text(
       (current_x, pos_y_texto), texto_dom, fill=(255, 255, 255), font=font_contador
   )
 
-  # Cargar iconos normales para las celdas de los espíritus
   img_check = None
   if os.path.exists(CHECK_ICON_PATH):
     img_check = Image.open(CHECK_ICON_PATH).convert("RGBA").resize((26, 26))
@@ -512,7 +508,6 @@ if os.path.exists(IMG_FOLDER):
       if filtro_vista == "Dominados" and not is_dom:
         continue
 
-      # Filtro del buscador por nombre
       nombre_crudo = MAPA_NOMBRES.get(
           nombre_base,
           nombre_base.split("_", 1)[-1]
@@ -594,6 +589,17 @@ if os.path.exists(IMG_FOLDER):
   str_lit.markdown("---")
   str_lit.subheader("🖼️ Generar Tarjetas de Colección")
 
+  # --- OPCIÓN DE PERSONALIZACIÓN DE FONDO ---
+  fondo_custom_usuario = str_lit.file_uploader(
+      "🎨 (Opcional) Subir imagen de fondo personalizada para la tarjeta",
+      type=["png", "jpg", "jpeg", "webp"],
+      help=(
+          "Resolución recomendada: 940 px de ancho por ~1200 px a 1500 px de"
+          " alto (Proporción vertical o HD). Si no subes ninguna, se usará el"
+          " fondo por defecto."
+      ),
+  )
+
   # Sección de Descarga General
   if archivos_ordenados:
     img_bytes = generar_imagen_coleccion(
@@ -601,6 +607,7 @@ if os.path.exists(IMG_FOLDER):
         str_lit.session_state.seleccionados,
         str_lit.session_state.dominados,
         usar_fondo_app=False,
+        imagen_custom=fondo_custom_usuario,
     )
     str_lit.download_button(
         label="📥 Crear y Descargar Imagen de Colección (General)",
@@ -637,6 +644,7 @@ if os.path.exists(IMG_FOLDER):
           str_lit.session_state.dominados,
           titulo_personalizado=f"CATEGORÍAS: {nombres_cats_str.upper()}",
           usar_fondo_app=True,
+          imagen_custom=fondo_custom_usuario,
       )
       str_lit.download_button(
           label="📥 Descargar Tarjeta de Categorías Seleccionadas",
@@ -683,6 +691,7 @@ if os.path.exists(IMG_FOLDER):
           str_lit.session_state.dominados,
           titulo_personalizado="SELECCIÓN PERSONALIZADA",
           usar_fondo_app=True,
+          imagen_custom=fondo_custom_usuario,
       )
       str_lit.download_button(
           label="📥 Descargar Tarjeta de Espíritus Seleccionados",
