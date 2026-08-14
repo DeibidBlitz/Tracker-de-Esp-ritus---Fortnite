@@ -329,13 +329,16 @@ if os.path.exists(IMG_FOLDER):
       ]
   ])
 
-  # Ordenar por categoría para la visualización general
-  archivos_ordenados = sorted(archivos_crudos, key=obtener_titulo_categoria)
+  # Mantener el orden numérico original de los archivos
+  archivos_ordenados = list(archivos_crudos)
   todos_los_ids = [os.path.splitext(f)[0] for f in archivos_ordenados]
 
-  categorias_disponibles = sorted(
-      list(set(obtener_titulo_categoria(f) for f in archivos_crudos))
-  )
+  categorias_disponibles = []
+  for f in archivos_crudos:
+    cat = obtener_titulo_categoria(f)
+    if cat not in categorias_disponibles:
+      categorias_disponibles.append(cat)
+
   orden_variantes_fijo = [
       "Normal",
       "Dorado",
@@ -570,7 +573,7 @@ if os.path.exists(IMG_FOLDER):
 
   str_lit.markdown("---")
 
-  # --- FILTROS Y BUSCADOR (Agrupado y filtrado por Categoría como originalmente) ---
+  # --- FILTROS Y BUSCADOR ---
   col_busqueda, col_cat = str_lit.columns([2, 2])
   with col_busqueda:
     busqueda_texto = str_lit.text_input(
