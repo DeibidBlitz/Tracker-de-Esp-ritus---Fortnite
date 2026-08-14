@@ -329,7 +329,6 @@ if os.path.exists(IMG_FOLDER):
       ]
   ])
 
-  # Mantener el orden numérico original de los archivos
   archivos_ordenados = list(archivos_crudos)
   todos_los_ids = [os.path.splitext(f)[0] for f in archivos_ordenados]
 
@@ -724,6 +723,8 @@ if os.path.exists(IMG_FOLDER):
     str_lit.info("No hay espíritus disponibles para descargar.")
 
   str_lit.markdown("---")
+
+  # --- DESCARGA MÚLTIPLE POR VARIANTES ---
   with str_lit.expander("📥 Descarga Múltiple por Variantes"):
     str_lit.markdown(
         "Selecciona las variantes que deseas incluir en tu tarjeta personalizada."
@@ -762,10 +763,50 @@ if os.path.exists(IMG_FOLDER):
           " la descarga."
       )
 
+  # --- DESCARGA MÚLTIPLE POR CATEGORÍAS (restaurada) ---
+  with str_lit.expander("📥 Descarga Múltiple por Categorías"):
+    str_lit.markdown(
+        "Selecciona las categorías que deseas incluir en tu tarjeta personalizada."
+    )
+
+    categorias_seleccionadas_multi = []
+    for cat in categorias_disponibles:
+      if str_lit.checkbox(f"{cat}", key=f"desc_multi_cat_{cat}"):
+        categorias_seleccionadas_multi.append(cat)
+
+    if categorias_seleccionadas_multi:
+      archivos_multi_cat_filtrados = []
+      for c in categorias_seleccionadas_multi:
+        archivos_multi_cat_filtrados.extend(
+            [f for f in archivos_crudos if obtener_titulo_categoria(f) == c]
+        )
+
+      nombres_cats_str = ", ".join(categorias_seleccionadas_multi)
+      img_bytes_multi_cat = generar_imagen_coleccion(
+          archivos_multi_cat_filtrados,
+          str_lit.session_state.seleccionados,
+          str_lit.session_state.dominados,
+          titulo_personalizado=f"CATEGORÍAS: {nombres_cats_str.upper()}",
+          usar_fondo_app=True,
+          imagen_custom=fondo_custom_usuario,
+      )
+      str_lit.download_button(
+          label="📥 Descargar Tarjeta de Categorías Seleccionadas",
+          data=img_bytes_multi_cat,
+          file_name="catalogo_categorias_seleccionadas.png",
+          mime="image/png",
+      )
+    else:
+      str_lit.info(
+          "Selecciona al menos una categoría en el menú de arriba para habilitar"
+          " la descarga."
+      )
+
+  # --- DESCARGA DE ESPÍRITUS INDIVIDUALES ---
   with str_lit.expander("📥 Descarga de Espíritus Individuales (Libre)"):
     str_lit.markdown(
-        "Selecciona espíritus específicos de cualquier variante para generar tu"
-        " tarjeta personalizada."
+        "Selecciona espíritus específicos de cualquier categoría para generar"
+        " tu tarjeta personalizada."
     )
 
     espiritus_individuales_seleccionados = []
