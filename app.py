@@ -4,12 +4,14 @@ import os
 from PIL import Image, ImageDraw, ImageFont
 import streamlit as str_lit
 
+# --- CONFIGURACIÓN DE CARPETAS Y ARCHIVOS ---
 IMG_FOLDER = "imagenes"
 IMAGEN_FONDO_EXPORT_PATH = os.path.join(IMG_FOLDER, "fondo_catalogo.png")
 IMAGEN_FONDO_APP_PATH = os.path.join(IMG_FOLDER, "fondo_app.png")
 CHECK_ICON_PATH = os.path.join(IMG_FOLDER, "check_verde.png")
 CORONA_ICON_PATH = os.path.join(IMG_FOLDER, "corona.png")
 
+# --- MAPEO DE NOMBRES (Opcional, para mostrar nombres bonitos) ---
 MAPA_NOMBRES = {
     "11-PUNTO_CERO-01_Punto-Cero_Normal": "Punto Cero",
     "11-PUNTO_CERO-02_Punto-Cero_Dorado": "Punto Cero Dorado",
@@ -37,6 +39,7 @@ str_lit.set_page_config(
     page_title="Tracker de Espíritus", page_icon="✨", layout="wide"
 )
 
+# --- ESTILOS CSS Y FONDO DE LA APP ---
 if os.path.exists(IMAGEN_FONDO_APP_PATH):
   import base64
 
@@ -60,6 +63,7 @@ if os.path.exists(IMAGEN_FONDO_APP_PATH):
     """
   str_lit.markdown(custom_css, unsafe_allow_html=True)
 
+# --- INICIALIZACIÓN DE ESTADOS DE SESIÓN ---
 if "seleccionados" not in str_lit.session_state:
   str_lit.session_state.seleccionados = set()
 
@@ -70,6 +74,7 @@ if not os.path.exists(IMG_FOLDER):
   os.makedirs(IMG_FOLDER)
 
 
+# --- FUNCIONES AUXILIARES ---
 def obtener_titulo_categoria(nombre_archivo):
   partes = nombre_archivo.split("-")
   if len(partes) >= 2:
@@ -78,21 +83,44 @@ def obtener_titulo_categoria(nombre_archivo):
 
 
 def obtener_variante(nombre_archivo):
-  nombre_lower = nombre_archivo.lower()
-  if "dorado" in nombre_lower:
-    return "Dorado"
-  elif "golosina" in nombre_lower:
-    return "Golosina"
-  elif "galáct" in nombre_lower or "galactic" in nombre_lower:
-    return "Galáctico"
-  elif "holo" in nombre_lower:
-    return "Holográfico"
-  elif "cubo" in nombre_lower or "cúbic" in nombre_lower:
-    return "Cúbico"
-  elif "patito" in nombre_lower:
-    return "Patito"
-  elif "gema" in nombre_lower:
+  nombre_base = os.path.splitext(nombre_archivo)[0].lower()
+  categoria = obtener_titulo_categoria(nombre_archivo).lower()
+
+  # Si el personaje principal es Patito, evaluamos sus variantes normales (Galáctico, Dorado, etc.)
+  if "patito" in categoria:
+    if "normal" in nombre_base or nombre_base.endswith("patito"):
+      return "Normal"
+    elif "dorado" in nombre_base:
+      return "Dorado"
+    elif "golosina" in nombre_base:
+      return "Golosina"
+    elif "galáct" in nombre_base or "galactic" in nombre_base:
+      return "Galáctico"
+    elif "holo" in nombre_base:
+      return "Holográfico"
+    elif "cubo" in nombre_base or "cúbic" in nombre_base:
+      return "Cúbico"
+    elif "gema" in nombre_base:
+      return "Gema"
+    else:
+      return "Normal"
+
+  # Para el resto de personajes, detectamos sus variantes específicas
+  if "gema" in nombre_base:
     return "Gema"
+  # Las 4 variantes Quack terminan en patito (ej. punto_cero_patito, agua_patito)
+  elif nombre_base.endswith("patito") and "normal" not in nombre_base:
+    return "Patito (Quack)"
+  elif "dorado" in nombre_base:
+    return "Dorado"
+  elif "golosina" in nombre_base:
+    return "Golosina"
+  elif "galáct" in nombre_base or "galactic" in nombre_base:
+    return "Galáctico"
+  elif "holo" in nombre_base:
+    return "Holográfico"
+  elif "cubo" in nombre_base or "cúbic" in nombre_base:
+    return "Cúbico"
   else:
     return "Normal"
 
@@ -312,6 +340,7 @@ def generar_imagen_coleccion(
   return buf.getvalue()
 
 
+# --- CARGA Y PROCESAMIENTO INICIAL ---
 if os.path.exists(IMG_FOLDER):
   archivos_crudos = sorted([
       f
@@ -345,7 +374,7 @@ if os.path.exists(IMG_FOLDER):
       "Galáctico",
       "Holográfico",
       "Cúbico",
-      "Patito",
+      "Patito (Quack)",
       "Gema",
   ]
   variantes_disponibles = [
@@ -484,7 +513,7 @@ if os.path.exists(IMG_FOLDER):
             on_change=make_toggle_cat_dom(ids_cat),
         )
 
-    # --- MARCAR Y DOMINAR POR VARIANTE (8 FIJAS) ---
+    # --- MARCAR Y DOMINAR POR VARIANTE ---
     with str_lit.expander("📌 Marcar por variante"):
       for var in variantes_disponibles:
         ids_var = var_to_ids.get(var, [])
@@ -763,7 +792,7 @@ if os.path.exists(IMG_FOLDER):
           " la descarga."
       )
 
-  # --- DESCARGA MÚLTIPLE POR CATEGORÍAS (restaurada) ---
+  # --- DESCARGA MÚLTIPLE POR CATEGORÍAS ---
   with str_lit.expander("📥 Descarga Múltiple por Categorías"):
     str_lit.markdown(
         "Selecciona las categorías que deseas incluir en tu tarjeta personalizada."
