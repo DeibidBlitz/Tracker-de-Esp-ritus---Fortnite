@@ -1,5 +1,5 @@
-import io
 from itertools import groupby
+import io
 import os
 from PIL import Image, ImageDraw, ImageFont
 import streamlit as str_lit
@@ -71,7 +71,30 @@ if not os.path.exists(IMG_FOLDER):
 
 
 def obtener_titulo_categoria(nombre_archivo):
-  return nombre_archivo.split("-")[1].replace("_", " ")
+  partes = nombre_archivo.split("-")
+  if len(partes) >= 2:
+    return partes[1].replace("_", " ").title()
+  return "General"
+
+
+def obtener_variante(nombre_archivo):
+  nombre_lower = nombre_archivo.lower()
+  if "dorado" in nombre_lower:
+    return "Dorado"
+  elif "golosina" in nombre_lower:
+    return "Golosina"
+  elif "galáct" in nombre_lower or "galactic" in nombre_lower:
+    return "Galáctico"
+  elif "holo" in nombre_lower:
+    return "Holográfico"
+  elif "cubo" in nombre_lower or "cúbic" in nombre_lower:
+    return "Cúbico"
+  elif "patito" in nombre_lower:
+    return "Patito"
+  elif "gema" in nombre_lower:
+    return "Gema"
+  else:
+    return "Normal"
 
 
 def generar_imagen_coleccion(
@@ -100,7 +123,6 @@ def generar_imagen_coleccion(
       else IMAGEN_FONDO_EXPORT_PATH
   )
 
-  # Carga de la imagen de fondo: prioriza la subida por el usuario
   if imagen_custom is not None:
     fondo_original = Image.open(imagen_custom).convert("RGBA")
     img_final = fondo_original.resize((ancho_total, alto_total))
@@ -307,27 +329,44 @@ if os.path.exists(IMG_FOLDER):
       ]
   ])
 
-  archivos_ordenados = []
-  for categoria, grupo in groupby(archivos_crudos, key=obtener_titulo_categoria):
-    archivos_ordenados.extend(list(grupo))
-
+  # Ordenar por categoría para la visualización general
+  archivos_ordenados = sorted(archivos_crudos, key=obtener_titulo_categoria)
   todos_los_ids = [os.path.splitext(f)[0] for f in archivos_ordenados]
 
-  categorias_disponibles = []
-  for f in archivos_crudos:
-    cat = obtener_titulo_categoria(f)
-    if cat not in categorias_disponibles:
-      categorias_disponibles.append(cat)
+  categorias_disponibles = sorted(
+      list(set(obtener_titulo_categoria(f) for f in archivos_crudos))
+  )
+  orden_variantes_fijo = [
+      "Normal",
+      "Dorado",
+      "Golosina",
+      "Galáctico",
+      "Holográfico",
+      "Cúbico",
+      "Patito",
+      "Gema",
+  ]
+  variantes_disponibles = [
+      v
+      for v in orden_variantes_fijo
+      if any(obtener_variante(f) == v for f in archivos_crudos)
+  ]
 
-  cat_to_archivos = {}
   cat_to_ids = {}
+  var_to_ids = {}
+
   for f in archivos_crudos:
     cat = obtener_titulo_categoria(f)
-    if cat not in cat_to_archivos:
-      cat_to_archivos[cat] = []
+    var = obtener_variante(f)
+    f_id = os.path.splitext(f)[0]
+
+    if cat not in cat_to_ids:
       cat_to_ids[cat] = []
-    cat_to_archivos[cat].append(f)
-    cat_to_ids[cat].append(os.path.splitext(f)[0])
+    cat_to_ids[cat].append(f_id)
+
+    if var not in var_to_ids:
+      var_to_ids[var] = []
+    var_to_ids[var].append(f_id)
 
   # --- BARRA LATERAL ---
   with str_lit.sidebar:
@@ -386,6 +425,7 @@ if os.path.exists(IMG_FOLDER):
     )
     str_lit.markdown("---")
 
+    # --- MARCAR Y DOMINAR POR CATEGORÍA ---
     with str_lit.expander("📌 Marcar por categoría"):
       for cat in categorias_disponibles:
         ids_cat = cat_to_ids[cat]
@@ -409,7 +449,7 @@ if os.path.exists(IMG_FOLDER):
           return callback
 
         str_lit.checkbox(
-            f"{cat.title()}",
+            f"{cat}",
             value=cat_checked_all,
             key=f"exp_chk_{cat}",
             on_change=make_toggle_cat_chk(ids_cat),
@@ -436,10 +476,69 @@ if os.path.exists(IMG_FOLDER):
           return callback
 
         str_lit.checkbox(
-            f"{cat.title()}",
+            f"{cat}",
             value=cat_dom_all,
             key=f"exp_dom_{cat}",
             on_change=make_toggle_cat_dom(ids_cat),
+        )
+
+    # --- MARCAR Y DOMINAR POR VARIANTE (8 FIJAS) ---
+    with str_lit.expander("📌 Marcar por variante"):
+      for var in variantes_disponibles:
+        ids_var = var_to_ids.get(var, [])
+        if not ids_var:
+          continue
+        var_checked_all = all(
+            i in str_lit.session_state.seleccionados for i in ids_var
+        )
+
+        def make_toggle_var_chk(v_ids):
+          def callback():
+            curr_all = all(
+                i in str_lit.session_state.seleccionados for i in v_ids
+            )
+            if curr_all:
+              for i in v_ids:
+                str_lit.session_state.seleccionados.discard(i)
+                str_lit.session_state.dominados.discard(i)
+            else:
+              for i in v_ids:
+                str_lit.session_state.seleccionados.add(i)
+
+          return callback
+
+        str_lit.checkbox(
+            f"{var}",
+            value=var_checked_all,
+            key=f"var_chk_{var}",
+            on_change=make_toggle_var_chk(ids_var),
+        )
+
+    with str_lit.expander("👑 Dominar por variante"):
+      for var in variantes_disponibles:
+        ids_var = var_to_ids.get(var, [])
+        if not ids_var:
+          continue
+        var_dom_all = all(i in str_lit.session_state.dominados for i in ids_var)
+
+        def make_toggle_var_dom(v_ids):
+          def callback():
+            curr_all = all(i in str_lit.session_state.dominados for i in v_ids)
+            if curr_all:
+              for i in v_ids:
+                str_lit.session_state.dominados.discard(i)
+            else:
+              for i in v_ids:
+                str_lit.session_state.seleccionados.add(i)
+                str_lit.session_state.dominados.add(i)
+
+          return callback
+
+        str_lit.checkbox(
+            f"{var}",
+            value=var_dom_all,
+            key=f"var_dom_{var}",
+            on_change=make_toggle_var_dom(ids_var),
         )
 
     str_lit.markdown("---")
@@ -471,7 +570,7 @@ if os.path.exists(IMG_FOLDER):
 
   str_lit.markdown("---")
 
-  # --- FILTROS Y BUSCADOR ---
+  # --- FILTROS Y BUSCADOR (Agrupado y filtrado por Categoría como originalmente) ---
   col_busqueda, col_cat = str_lit.columns([2, 2])
   with col_busqueda:
     busqueda_texto = str_lit.text_input(
@@ -480,19 +579,21 @@ if os.path.exists(IMG_FOLDER):
         placeholder="Escribe el nombre del espíritu...",
     )
   with col_cat:
-    opciones_menu = ["Todos"] + [cat.title() for cat in categorias_disponibles]
+    opciones_menu_cat = ["Todos"] + categorias_disponibles
     categoria_seleccionada = str_lit.selectbox(
         "🎯 Filtrar por categoría",
-        opciones_menu,
+        opciones_menu_cat,
         label_visibility="visible",
     )
 
-  str_lit.subheader("📋 Lista de Colección")
+  str_lit.subheader("📋 Lista de Colección (Agrupada por Categoría)")
 
-  for categoria, grupo in groupby(archivos_crudos, key=obtener_titulo_categoria):
+  for categoria, grupo in groupby(
+      archivos_ordenados, key=obtener_titulo_categoria
+  ):
     if (
         categoria_seleccionada != "Todos"
-        and categoria.title() != categoria_seleccionada
+        and categoria != categoria_seleccionada
     ):
       continue
 
@@ -529,7 +630,7 @@ if os.path.exists(IMG_FOLDER):
     if not grupo_filtrado:
       continue
 
-    str_lit.markdown(f"### {categoria.title()}")
+    str_lit.markdown(f"### Categoría: {categoria}")
     cols = str_lit.columns(5)
 
     for i, archivo in enumerate(grupo_filtrado):
@@ -543,12 +644,15 @@ if os.path.exists(IMG_FOLDER):
           .title(),
       )
       nombre_mostrado = nombre_crudo.replace("Normal", "").strip()
+      variante_actual = obtener_variante(archivo)
 
       with cols[i % 5]:
         str_lit.image(f"{IMG_FOLDER}/{archivo}", width=100)
         str_lit.markdown(
             f"<div style='text-align: center; font-weight: bold; font-size:"
-            f" 14px; margin-bottom: 5px;'>{nombre_mostrado}</div>",
+            f" 13px; margin-bottom: 2px;'>{nombre_mostrado}</div>"
+            f"<div style='text-align: center; color: #aaa; font-size:"
+            f" 11px; margin-bottom: 5px;'>({variante_actual})</div>",
             unsafe_allow_html=True,
         )
 
@@ -589,7 +693,6 @@ if os.path.exists(IMG_FOLDER):
   str_lit.markdown("---")
   str_lit.subheader("🖼️ Generar Tarjetas de Colección")
 
-  # --- OPCIÓN DE PERSONALIZACIÓN DE FONDO ---
   fondo_custom_usuario = str_lit.file_uploader(
       "🎨 (Opcional) Subir imagen de fondo personalizada para la tarjeta",
       type=["png", "jpg", "jpeg", "webp"],
@@ -600,7 +703,6 @@ if os.path.exists(IMG_FOLDER):
       ),
   )
 
-  # Sección de Descarga General
   if archivos_ordenados:
     img_bytes = generar_imagen_coleccion(
         archivos_ordenados,
@@ -618,57 +720,58 @@ if os.path.exists(IMG_FOLDER):
   else:
     str_lit.info("No hay espíritus disponibles para descargar.")
 
-  # Sección de Descarga Múltiple por Categorías
   str_lit.markdown("---")
-  with str_lit.expander("📥 Descarga Múltiple por Categorías"):
+  with str_lit.expander("📥 Descarga Múltiple por Variantes"):
     str_lit.markdown(
-        "Selecciona las categorías que deseas incluir en tu tarjeta personalizada."
+        "Selecciona las variantes que deseas incluir en tu tarjeta personalizada."
     )
 
-    categorias_seleccionadas_multi = []
-    for cat in categorias_disponibles:
-      if str_lit.checkbox(f"{cat.title()}", key=f"desc_multi_{cat}"):
-        categorias_seleccionadas_multi.append(cat)
+    variantes_seleccionadas_multi = []
+    for var in variantes_disponibles:
+      if str_lit.checkbox(f"{var}", key=f"desc_multi_{var}"):
+        variantes_seleccionadas_multi.append(var)
 
-    if categorias_seleccionadas_multi:
+    if variantes_seleccionadas_multi:
       archivos_multi_filtrados = []
-      for c in categorias_seleccionadas_multi:
-        archivos_multi_filtrados.extend(cat_to_archivos[c])
+      for v in variantes_seleccionadas_multi:
+        archivos_multi_filtrados.extend(
+            [f for f in archivos_crudos if obtener_variante(f) == v]
+        )
 
-      nombres_cats_str = ", ".join(
-          [c.title() for c in categorias_seleccionadas_multi]
-      )
+      nombres_vars_str = ", ".join(variantes_seleccionadas_multi)
       img_bytes_multi = generar_imagen_coleccion(
           archivos_multi_filtrados,
           str_lit.session_state.seleccionados,
           str_lit.session_state.dominados,
-          titulo_personalizado=f"CATEGORÍAS: {nombres_cats_str.upper()}",
+          titulo_personalizado=f"VARIANTES: {nombres_vars_str.upper()}",
           usar_fondo_app=True,
           imagen_custom=fondo_custom_usuario,
       )
       str_lit.download_button(
-          label="📥 Descargar Tarjeta de Categorías Seleccionadas",
+          label="📥 Descargar Tarjeta de Variantes Seleccionadas",
           data=img_bytes_multi,
-          file_name="catalogo_categorias_seleccionadas.png",
+          file_name="catalogo_variantes_seleccionadas.png",
           mime="image/png",
       )
     else:
       str_lit.info(
-          "Selecciona al menos una categoría en el menú de arriba para"
-          " habilitar la descarga."
+          "Selecciona al menos una variante en el menú de arriba para habilitar"
+          " la descarga."
       )
 
-  # Sección de Descarga de Espíritus Individuales
   with str_lit.expander("📥 Descarga de Espíritus Individuales (Libre)"):
     str_lit.markdown(
-        "Selecciona espíritus específicos de cualquier categoría para generar"
-        " tu tarjeta personalizada."
+        "Selecciona espíritus específicos de cualquier variante para generar tu"
+        " tarjeta personalizada."
     )
 
     espiritus_individuales_seleccionados = []
     for cat in categorias_disponibles:
-      str_lit.markdown(f"**{cat.title()}**")
-      for archivo in cat_to_archivos[cat]:
+      str_lit.markdown(f"**Categoría: {cat}**")
+      archivos_de_cat = [
+          f for f in archivos_crudos if obtener_titulo_categoria(f) == cat
+      ]
+      for archivo in archivos_de_cat:
         nombre_base = os.path.splitext(archivo)[0]
         nombre_crudo = MAPA_NOMBRES.get(
             nombre_base,
@@ -678,9 +781,10 @@ if os.path.exists(IMG_FOLDER):
             .title(),
         )
         nombre_mostrado = nombre_crudo.replace("Normal", "").strip()
+        var_a = obtener_variante(archivo)
 
         if str_lit.checkbox(
-            f"{nombre_mostrado}", key=f"indiv_down_{nombre_base}"
+            f"{nombre_mostrado} ({var_a})", key=f"indiv_down_{nombre_base}"
         ):
           espiritus_individuales_seleccionados.append(archivo)
 
