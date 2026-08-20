@@ -16,7 +16,6 @@ MAPA_NOMBRES = {
     "12-EXPLORADOR_DE_TORMENTA-01_Explorador_de_Tormenta_Normal": "Explorador de Tormenta",
     "12-EXPLORADOR_DE_TORMENTA-02_Explorador_de_Tormenta_Dorado": "Explorador de Tormenta Dorado",
     "12-EXPLORADOR_DE_TORMENTA-03_Explorador_de_Tormenta_Maestro": "Explorador de Tormenta Maestro",
-
 }
 
 str_lit.set_page_config(
@@ -62,7 +61,13 @@ if not os.path.exists(IMG_FOLDER):
 def obtener_titulo_categoria(nombre_archivo):
   partes = nombre_archivo.split("-")
   if len(partes) >= 2:
-    return partes[1].replace("_", " ").title()
+    cat = partes[1].replace("_", " ").title()
+    
+    # Diccionario para corregir nombres de categorías específicos
+    mapa_categorias = {
+        "8": "8 Bits",
+    }
+    return mapa_categorias.get(cat, cat)
   return "General"
 
 
