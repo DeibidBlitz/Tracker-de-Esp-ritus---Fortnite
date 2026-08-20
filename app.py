@@ -13,26 +13,10 @@ CORONA_ICON_PATH = os.path.join(IMG_FOLDER, "corona.png")
 
 # --- MAPEO DE NOMBRES (Opcional, para mostrar nombres bonitos) ---
 MAPA_NOMBRES = {
-    "11-PUNTO_CERO-01_Punto-Cero_Normal": "Punto Cero",
-    "11-PUNTO_CERO-02_Punto-Cero_Dorado": "Punto Cero Dorado",
-    "11-PUNTO_CERO-03_Punto-Cero_Golosina": "Punto Cero Golosina",
-    "11-PUNTO_CERO-04_Punto-Cero_Galáctico": "Punto Cero Galáctico",
-    "11-PUNTO_CERO-05_Punto-Cero_Holo": "Punto Cero Holo",
-    "11-PUNTO_CERO-06_Punto-Cero_Cubo": "Punto Cero Cubo",
-    "11-PUNTO_CERO-07_Punto-Cero_Patito": "Punto Cero Patito",
-    "11-PUNTO_CERO-08_Punto-Cero_Gema": "Punto Cero Gema",
-    "12-PALITO_DE_PEZ-01_Palito-De_Pez_Normal": "Palito De Pez",
-    "12-PALITO_DE_PEZ-02_Palito-De_Pez_Dorado": "Palito De Pez Dorado",
-    "12-PALITO_DE_PEZ-03_Palito-De_Pez_Golosina": "Palito De Pez Golosina",
-    "12-PALITO_DE_PEZ-04_Palito-De_Pez_Galáctico": "Palito De Pez Galáctico",
-    "12-PALITO_DE_PEZ-05_Palito-De_Pez_Cubo": "Palito De Pez Cubo",
-    "18-LOS_SIETE-01_Los_Siete_Normal": "Los Siete",
-    "18-LOS_SIETE-02_Los_Siete_Dorado": "Los Siete Dorado",
-    "18-LOS_SIETE-03_Los_Siete_Golosina": "Los Siete Golosina",
-    "18-LOS_SIETE-04_Los_Siete_Galáctico": "Los Siete Galáctico",
-    "18-LOS_SIETE-05_Los_Siete_Holo": "Los Siete Holo",
-    "20-VINI_JR-01_Vini_Jr_Normal": "Vini Jr",
-    "22-JOHN_WICK-01_John_Wick_Normal": "John Wick",
+    "12-EXPLORADOR_DE_TORMENTA-01_Explorador_de_Tormenta_Normal": "Explorador de Tormenta",
+    "12-EXPLORADOR_DE_TORMENTA-02_Explorador_de_Tormenta_Dorado": "Explorador de Tormenta Dorado",
+    "12-EXPLORADOR_DE_TORMENTA-03_Explorador_de_Tormenta_Maestro": "Explorador de Tormenta Maestro",
+
 }
 
 str_lit.set_page_config(
