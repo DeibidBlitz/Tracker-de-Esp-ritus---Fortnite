@@ -47,6 +47,9 @@ if "seleccionados" not in str_lit.session_state:
 if "dominados" not in str_lit.session_state:
   str_lit.session_state.dominados = set()
 
+if "custom_tarjeta_ids" not in str_lit.session_state:
+  str_lit.session_state.custom_tarjeta_ids = set()
+
 if not os.path.exists(IMG_FOLDER):
   os.makedirs(IMG_FOLDER)
 
@@ -61,7 +64,6 @@ def obtener_titulo_categoria(nombre_archivo):
 
 
 def obtener_nombre_limpio(nombre_base):
-  """Extrae el nombre real limpio, removiendo cualquier número inicial y sufijos."""
   partes_guion = nombre_base.split("-")
 
   if len(partes_guion) >= 4:
@@ -77,14 +79,12 @@ def obtener_nombre_limpio(nombre_base):
     if nombre_formateado.endswith(suf):
       nombre_formateado = nombre_formateado[: -len(suf)]
 
-  # Elimina de forma limpia cualquier número inicial que acompañe al nombre
   nombre_formateado = re.sub(r"^\d+\s*", "", nombre_formateado)
 
   return nombre_formateado.strip()
 
 
 def obtener_variante(nombre_archivo):
-  """Detecta la variante actual de forma simplificada."""
   nombre_base = os.path.splitext(nombre_archivo)[0].lower()
 
   if "dorado" in nombre_base:
@@ -103,6 +103,13 @@ def generar_imagen_coleccion(
     usar_fondo_app=False,
     imagen_custom=None,
 ):
+  if not lista_ordenada_archivos:
+    # Retornar una imagen vacía mínima si no hay elementos
+    img_vacia = Image.new("RGBA", (400, 150), color=(20, 20, 20, 255))
+    buf = io.BytesIO()
+    img_vacia.save(buf, format="PNG")
+    return buf.getvalue()
+
   columnas = 10
   ancho_celda = 90
   alto_celda = 110
@@ -312,7 +319,6 @@ def generar_imagen_coleccion(
 
 # --- CARGA Y PROCESAMIENTO INICIAL ---
 if os.path.exists(IMG_FOLDER):
-  # Lista negra de archivos de interfaz que NO son espíritus
   archivos_ignorar = {
       "check_verde.png",
       "corona.png",
@@ -337,28 +343,13 @@ if os.path.exists(IMG_FOLDER):
     if cat not in categorias_disponibles:
       categorias_disponibles.append(cat)
 
-  orden_variantes_fijo = ["Normal", "Dorado", "Maestro"]
-  variantes_disponibles = [
-      v
-      for v in orden_variantes_fijo
-      if any(obtener_variante(f) == v for f in archivos_crudos)
-  ]
-
   cat_to_ids = {}
-  var_to_ids = {}
-
   for f in archivos_crudos:
     cat = obtener_titulo_categoria(f)
-    var = obtener_variante(f)
     f_id = os.path.splitext(f)[0]
-
     if cat not in cat_to_ids:
       cat_to_ids[cat] = []
     cat_to_ids[cat].append(f_id)
-
-    if var not in var_to_ids:
-      var_to_ids[var] = []
-    var_to_ids[var].append(f_id)
 
   # --- BARRA LATERAL ---
   with str_lit.sidebar:
@@ -417,7 +408,6 @@ if os.path.exists(IMG_FOLDER):
     )
     str_lit.markdown("---")
 
-    # --- MARCAR Y DOMINAR POR CATEGORÍA ---
     with str_lit.expander("📌 Marcar por categoría"):
       for cat in categorias_disponibles:
         ids_cat = cat_to_ids[cat]
@@ -621,6 +611,7 @@ if os.path.exists(IMG_FOLDER):
   )
 
   if archivos_ordenados:
+    # 1. Opción General
     img_bytes = generar_imagen_coleccion(
         archivos_ordenados,
         str_lit.session_state.seleccionados,
@@ -634,6 +625,117 @@ if os.path.exists(IMG_FOLDER):
         file_name="catalogo_espiritus.png",
         mime="image/png",
     )
+
+    str_lit.markdown("---")
+    str_lit.markdown("#### 📂 Tarjetas por Categoría")
+    cols_cat_dl = str_lit.columns(len(categorias_disponibles) or 1)
+    for idx, cat in enumerate(categorias_disponibles):
+      archivos_cat = [
+          f for f in archivos_ordenados if obtener_titulo_categoria(f) == cat
+      ]
+      if archivos_cat:
+        img_cat_bytes = generar_imagen_coleccion(
+            archivos_cat,
+            str_lit.session_state.seleccionados,
+            str_lit.session_state.dominados,
+            titulo_personalizado=f"CATEGORÍA: {cat.upper()}",
+            usar_fondo_app=False,
+            imagen_custom=fondo_custom_usuario,
+        )
+        with cols_cat_dl[idx % len(cols_cat_dl)]:
+          str_lit.download_button(
+              label=f"📥 Descargar {cat}",
+              data=img_cat_bytes,
+              file_name=f"catalogo_{cat.lower().replace(' ', '_')}.png",
+              mime="image/png",
+              key=f"dl_cat_{cat}",
+          )
+
+    str_lit.markdown("---")
+    str_lit.markdown("#### ✨ Crear Tarjeta Personalizada (Múltiples Espíritus)")
+
+    with str_lit.expander(
+        "🛠️ Seleccionar espíritus para tarjeta a medida (Haz clic"
+        " aquí)"
+    ):
+      str_lit.markdown(
+          "Marca las casillas de los espíritus que deseas incluir juntos en"
+          " tu tarjeta personalizada:"
+      )
+
+      # Botones rápidos de selección dentro del expander
+      c_sel_all, c_des_all = str_lit.columns(2)
+      with c_sel_all:
+        if str_lit.button("Seleccionar Todos para Personalizada"):
+          for f in archivos_ordenados:
+            str_lit.session_state.custom_tarjeta_ids.add(
+                os.path.splitext(f)[0]
+            )
+          str_lit.rerun()
+      with c_des_all:
+        if str_lit.button("Deseleccionar Todos"):
+          str_lit.session_state.custom_tarjeta_ids.clear()
+          str_lit.rerun()
+
+      str_lit.markdown("")
+
+      # Cuadrícula para marcar elementos personalizados
+      cols_custom = str_lit.columns(4)
+      for idx, archivo in enumerate(archivos_ordenados):
+        f_id = os.path.splitext(archivo)[0]
+        nombre_limpio = obtener_nombre_limpio(f_id)
+        variante = obtener_variante(archivo)
+        etiqueta_checkbox = f"{nombre_limpio} ({variante})"
+
+        is_selected_custom = f_id in str_lit.session_state.custom_tarjeta_ids
+
+        with cols_custom[idx % 4]:
+          checkbox_val = str_lit.checkbox(
+              etiqueta_checkbox,
+              value=is_selected_custom,
+              key=f"custom_box_{f_id}",
+          )
+          if checkbox_val:
+            str_lit.session_state.custom_tarjeta_ids.add(f_id)
+          else:
+            str_lit.session_state.custom_tarjeta_ids.discard(f_id)
+
+    # Filtrar los archivos que están marcados en el custom state
+    archivos_custom_finales = [
+        f
+        for f in archivos_ordenados
+        if os.path.splitext(f)[0] in str_lit.session_state.custom_tarjeta_ids
+    ]
+
+    titulo_custom_input = str_lit.text_input(
+        "🏷️ Título para la tarjeta personalizada",
+        value="MI SELECCIÓN DE ESPÍRITUS",
+    )
+
+    if archivos_custom_finales:
+      img_custom_bytes = generar_imagen_coleccion(
+          archivos_custom_finales,
+          str_lit.session_state.seleccionados,
+          str_lit.session_state.dominados,
+          titulo_personalizado=titulo_custom_input,
+          usar_fondo_app=False,
+          imagen_custom=fondo_custom_usuario,
+      )
+      str_lit.download_button(
+          label=(
+              "📥 Descargar Tarjeta Personalizada ("
+              f"{len(archivos_custom_finales)} espíritus seleccionados)"
+          ),
+          data=img_custom_bytes,
+          file_name="tarjeta_personalizada_espiritus.png",
+          mime="image/png",
+      )
+    else:
+      str_lit.info(
+          "Selecciona al menos un espíritu en el menú desplegable de arriba"
+          " para generar tu tarjeta personalizada."
+      )
+
   else:
     str_lit.info("No hay espíritus disponibles para descargar.")
 
