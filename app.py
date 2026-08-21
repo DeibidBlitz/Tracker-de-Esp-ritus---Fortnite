@@ -13,6 +13,9 @@ CORONA_ICON_PATH = os.path.join(IMG_FOLDER, "corona.png")
 
 # --- MAPEO DE NOMBRES (Opcional, para mostrar nombres bonitos) ---
 MAPA_NOMBRES = {
+    "01-JAZZ_JACKRABBIT-01_Jazz_Jackrabbit_Normal": "Jazz Jackrabbit Normal",
+    "01-JAZZ_JACKRABBIT-02_Jazz_Jackrabbit_Dorado": "Jazz Jackrabbit Dorado",
+    "01-JAZZ_JACKRABBIT-03_Jazz_Jackrabbit_Maestro": "Jazz Jackrabbit Maestro",
     "12-EXPLORADOR_DE_TORMENTA-01_Explorador_de_Tormenta_Normal": "Explorador de Tormenta",
     "12-EXPLORADOR_DE_TORMENTA-02_Explorador_de_Tormenta_Dorado": "Explorador de Tormenta Dorado",
     "12-EXPLORADOR_DE_TORMENTA-03_Explorador_de_Tormenta_Maestro": "Explorador de Tormenta Maestro",
