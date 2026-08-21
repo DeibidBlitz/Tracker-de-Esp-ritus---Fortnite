@@ -2,6 +2,7 @@ from itertools import groupby
 import io
 import os
 from PIL import Image, ImageDraw, ImageFont
+import re
 import streamlit as str_lit
 
 # --- CONFIGURACIÓN DE CARPETAS Y ARCHIVOS ---
@@ -10,16 +11,6 @@ IMAGEN_FONDO_EXPORT_PATH = os.path.join(IMG_FOLDER, "fondo_catalogo.png")
 IMAGEN_FONDO_APP_PATH = os.path.join(IMG_FOLDER, "fondo_app.png")
 CHECK_ICON_PATH = os.path.join(IMG_FOLDER, "check_verde.png")
 CORONA_ICON_PATH = os.path.join(IMG_FOLDER, "corona.png")
-
-# --- MAPEO DE NOMBRES (Opcional, para mostrar nombres bonitos) ---
-MAPA_NOMBRES = {
-    "01-JAZZ_JACKRABBIT-01_Jazz_Jackrabbit_Normal": "Jazz Jackrabbit Normal",
-    "01-JAZZ_JACKRABBIT-02_Jazz_Jackrabbit_Dorado": "Jazz Jackrabbit Dorado",
-    "01-JAZZ_JACKRABBIT-03_Jazz_Jackrabbit_Maestro": "Jazz Jackrabbit Maestro",
-    "12-EXPLORADOR_DE_TORMENTA-01_Explorador_de_Tormenta_Normal": "Explorador de Tormenta",
-    "12-EXPLORADOR_DE_TORMENTA-02_Explorador_de_Tormenta_Dorado": "Explorador de Tormenta Dorado",
-    "12-EXPLORADOR_DE_TORMENTA-03_Explorador_de_Tormenta_Maestro": "Explorador de Tormenta Maestro",
-}
 
 str_lit.set_page_config(
     page_title="Tracker de Espíritus", page_icon="✨", layout="wide"
@@ -60,59 +51,46 @@ if not os.path.exists(IMG_FOLDER):
   os.makedirs(IMG_FOLDER)
 
 
-# --- FUNCIONES AUXILIARES ---
+# --- FUNCIONES AUXILIARES LIMPIAS ---
 def obtener_titulo_categoria(nombre_archivo):
   partes = nombre_archivo.split("-")
   if len(partes) >= 2:
     cat = partes[1].replace("_", " ").title()
-    
-    # Diccionario para corregir nombres de categorías específicos
-    mapa_categorias = {
-        "8": "8 Bits",
-    }
-    return mapa_categorias.get(cat, cat)
+    return cat
   return "General"
 
 
+def obtener_nombre_limpio(nombre_base):
+  """Extrae el nombre real limpio, removiendo cualquier número inicial y sufijos."""
+  partes_guion = nombre_base.split("-")
+
+  if len(partes_guion) >= 4:
+    segmento_nombre = "-".join(partes_guion[3:])
+  elif len(partes_guion) == 3:
+    segmento_nombre = partes_guion[2]
+  else:
+    segmento_nombre = nombre_base
+
+  nombre_formateado = segmento_nombre.replace("_", " ")
+
+  for suf in [" Normal", " Dorado", " Maestro"]:
+    if nombre_formateado.endswith(suf):
+      nombre_formateado = nombre_formateado[: -len(suf)]
+
+  # Elimina de forma limpia cualquier número inicial que acompañe al nombre
+  nombre_formateado = re.sub(r"^\d+\s*", "", nombre_formateado)
+
+  return nombre_formateado.strip()
+
+
 def obtener_variante(nombre_archivo):
+  """Detecta la variante actual de forma simplificada."""
   nombre_base = os.path.splitext(nombre_archivo)[0].lower()
-  categoria = obtener_titulo_categoria(nombre_archivo).lower()
 
-  # Si el personaje principal es Patito, evaluamos sus variantes normales (Galáctico, Dorado, etc.)
-  if "patito" in categoria:
-    if "normal" in nombre_base or nombre_base.endswith("patito"):
-      return "Normal"
-    elif "dorado" in nombre_base:
-      return "Dorado"
-    elif "golosina" in nombre_base:
-      return "Golosina"
-    elif "galáct" in nombre_base or "galactic" in nombre_base:
-      return "Galáctico"
-    elif "holo" in nombre_base:
-      return "Holográfico"
-    elif "cubo" in nombre_base or "cúbic" in nombre_base:
-      return "Cúbico"
-    elif "gema" in nombre_base:
-      return "Gema"
-    else:
-      return "Normal"
-
-  # Para el resto de personajes, detectamos sus variantes específicas
-  if "gema" in nombre_base:
-    return "Gema"
-  # Las 4 variantes Quack terminan en patito (ej. punto_cero_patito, agua_patito)
-  elif nombre_base.endswith("patito") and "normal" not in nombre_base:
-    return "Patito (Quack)"
-  elif "dorado" in nombre_base:
+  if "dorado" in nombre_base:
     return "Dorado"
-  elif "golosina" in nombre_base:
-    return "Golosina"
-  elif "galáct" in nombre_base or "galactic" in nombre_base:
-    return "Galáctico"
-  elif "holo" in nombre_base:
-    return "Holográfico"
-  elif "cubo" in nombre_base or "cúbic" in nombre_base:
-    return "Cúbico"
+  elif "maestro" in nombre_base:
+    return "Maestro"
   else:
     return "Normal"
 
@@ -334,20 +312,20 @@ def generar_imagen_coleccion(
 
 # --- CARGA Y PROCESAMIENTO INICIAL ---
 if os.path.exists(IMG_FOLDER):
+  # Lista negra de archivos de interfaz que NO son espíritus
+  archivos_ignorar = {
+      "check_verde.png",
+      "corona.png",
+      "fondo_app.png",
+      "fondo_catalogo.png",
+  }
+
   archivos_crudos = sorted([
       f
       for f in os.listdir(IMG_FOLDER)
       if f.lower().endswith(".png")
       and not f.startswith("num_")
-      and f
-      not in [
-          "fondo_catalogo.png",
-          "fondo_app.png",
-          "check_verde.png",
-          "corona.png",
-          "titulo_banner.png",
-          "fuente_fallback.ttf",
-      ]
+      and f.lower() not in archivos_ignorar
   ])
 
   archivos_ordenados = list(archivos_crudos)
@@ -359,16 +337,7 @@ if os.path.exists(IMG_FOLDER):
     if cat not in categorias_disponibles:
       categorias_disponibles.append(cat)
 
-  orden_variantes_fijo = [
-      "Normal",
-      "Dorado",
-      "Golosina",
-      "Galáctico",
-      "Holográfico",
-      "Cúbico",
-      "Patito (Quack)",
-      "Gema",
-  ]
+  orden_variantes_fijo = ["Normal", "Dorado", "Maestro"]
   variantes_disponibles = [
       v
       for v in orden_variantes_fijo
@@ -505,65 +474,6 @@ if os.path.exists(IMG_FOLDER):
             on_change=make_toggle_cat_dom(ids_cat),
         )
 
-    # --- MARCAR Y DOMINAR POR VARIANTE ---
-    with str_lit.expander("📌 Marcar por variante"):
-      for var in variantes_disponibles:
-        ids_var = var_to_ids.get(var, [])
-        if not ids_var:
-          continue
-        var_checked_all = all(
-            i in str_lit.session_state.seleccionados for i in ids_var
-        )
-
-        def make_toggle_var_chk(v_ids):
-          def callback():
-            curr_all = all(
-                i in str_lit.session_state.seleccionados for i in v_ids
-            )
-            if curr_all:
-              for i in v_ids:
-                str_lit.session_state.seleccionados.discard(i)
-                str_lit.session_state.dominados.discard(i)
-            else:
-              for i in v_ids:
-                str_lit.session_state.seleccionados.add(i)
-
-          return callback
-
-        str_lit.checkbox(
-            f"{var}",
-            value=var_checked_all,
-            key=f"var_chk_{var}",
-            on_change=make_toggle_var_chk(ids_var),
-        )
-
-    with str_lit.expander("👑 Dominar por variante"):
-      for var in variantes_disponibles:
-        ids_var = var_to_ids.get(var, [])
-        if not ids_var:
-          continue
-        var_dom_all = all(i in str_lit.session_state.dominados for i in ids_var)
-
-        def make_toggle_var_dom(v_ids):
-          def callback():
-            curr_all = all(i in str_lit.session_state.dominados for i in v_ids)
-            if curr_all:
-              for i in v_ids:
-                str_lit.session_state.dominados.discard(i)
-            else:
-              for i in v_ids:
-                str_lit.session_state.seleccionados.add(i)
-                str_lit.session_state.dominados.add(i)
-
-          return callback
-
-        str_lit.checkbox(
-            f"{var}",
-            value=var_dom_all,
-            key=f"var_dom_{var}",
-            on_change=make_toggle_var_dom(ids_var),
-        )
-
     str_lit.markdown("---")
     str_lit.info("Marca tus progresos y genera tu tarjeta abajo.")
 
@@ -632,14 +542,7 @@ if os.path.exists(IMG_FOLDER):
       if filtro_vista == "Dominados" and not is_dom:
         continue
 
-      nombre_crudo = MAPA_NOMBRES.get(
-          nombre_base,
-          nombre_base.split("_", 1)[-1]
-          .replace("-", " ")
-          .replace("_", " ")
-          .title(),
-      )
-      nombre_mostrado = nombre_crudo.replace("Normal", "").strip()
+      nombre_mostrado = obtener_nombre_limpio(nombre_base)
 
       if (
           busqueda_texto
@@ -659,14 +562,7 @@ if os.path.exists(IMG_FOLDER):
     for i, archivo in enumerate(grupo_filtrado):
       nombre_base = os.path.splitext(archivo)[0]
 
-      nombre_crudo = MAPA_NOMBRES.get(
-          nombre_base,
-          nombre_base.split("_", 1)[-1]
-          .replace("-", " ")
-          .replace("_", " ")
-          .title(),
-      )
-      nombre_mostrado = nombre_crudo.replace("Normal", "").strip()
+      nombre_mostrado = obtener_nombre_limpio(nombre_base)
       variante_actual = obtener_variante(archivo)
 
       with cols[i % 5]:
@@ -710,7 +606,10 @@ if os.path.exists(IMG_FOLDER):
               str_lit.rerun()
           else:
             str_lit.button(
-                "🔒", key=f"dom_{nombre_base}", disabled=True, use_container_width=True
+                "🔒",
+                key=f"dom_{nombre_base}",
+                disabled=True,
+                use_container_width=True,
             )
 
   str_lit.markdown("---")
@@ -719,11 +618,6 @@ if os.path.exists(IMG_FOLDER):
   fondo_custom_usuario = str_lit.file_uploader(
       "🎨 (Opcional) Subir imagen de fondo personalizada para la tarjeta",
       type=["png", "jpg", "jpeg", "webp"],
-      help=(
-          "Resolución recomendada: 940 px de ancho por ~1200 px a 1500 px de"
-          " alto (Proporción vertical o HD). Si no subes ninguna, se usará el"
-          " fondo por defecto."
-      ),
   )
 
   if archivos_ordenados:
@@ -742,134 +636,6 @@ if os.path.exists(IMG_FOLDER):
     )
   else:
     str_lit.info("No hay espíritus disponibles para descargar.")
-
-  str_lit.markdown("---")
-
-  # --- DESCARGA MÚLTIPLE POR VARIANTES ---
-  with str_lit.expander("📥 Descarga Múltiple por Variantes"):
-    str_lit.markdown(
-        "Selecciona las variantes que deseas incluir en tu tarjeta personalizada."
-    )
-
-    variantes_seleccionadas_multi = []
-    for var in variantes_disponibles:
-      if str_lit.checkbox(f"{var}", key=f"desc_multi_{var}"):
-        variantes_seleccionadas_multi.append(var)
-
-    if variantes_seleccionadas_multi:
-      archivos_multi_filtrados = []
-      for v in variantes_seleccionadas_multi:
-        archivos_multi_filtrados.extend(
-            [f for f in archivos_crudos if obtener_variante(f) == v]
-        )
-
-      nombres_vars_str = ", ".join(variantes_seleccionadas_multi)
-      img_bytes_multi = generar_imagen_coleccion(
-          archivos_multi_filtrados,
-          str_lit.session_state.seleccionados,
-          str_lit.session_state.dominados,
-          titulo_personalizado=f"VARIANTES: {nombres_vars_str.upper()}",
-          usar_fondo_app=True,
-          imagen_custom=fondo_custom_usuario,
-      )
-      str_lit.download_button(
-          label="📥 Descargar Tarjeta de Variantes Seleccionadas",
-          data=img_bytes_multi,
-          file_name="catalogo_variantes_seleccionadas.png",
-          mime="image/png",
-      )
-    else:
-      str_lit.info(
-          "Selecciona al menos una variante en el menú de arriba para habilitar"
-          " la descarga."
-      )
-
-  # --- DESCARGA MÚLTIPLE POR CATEGORÍAS ---
-  with str_lit.expander("📥 Descarga Múltiple por Categorías"):
-    str_lit.markdown(
-        "Selecciona las categorías que deseas incluir en tu tarjeta personalizada."
-    )
-
-    categorias_seleccionadas_multi = []
-    for cat in categorias_disponibles:
-      if str_lit.checkbox(f"{cat}", key=f"desc_multi_cat_{cat}"):
-        categorias_seleccionadas_multi.append(cat)
-
-    if categorias_seleccionadas_multi:
-      archivos_multi_cat_filtrados = []
-      for c in categorias_seleccionadas_multi:
-        archivos_multi_cat_filtrados.extend(
-            [f for f in archivos_crudos if obtener_titulo_categoria(f) == c]
-        )
-
-      nombres_cats_str = ", ".join(categorias_seleccionadas_multi)
-      img_bytes_multi_cat = generar_imagen_coleccion(
-          archivos_multi_cat_filtrados,
-          str_lit.session_state.seleccionados,
-          str_lit.session_state.dominados,
-          titulo_personalizado=f"CATEGORÍAS: {nombres_cats_str.upper()}",
-          usar_fondo_app=True,
-          imagen_custom=fondo_custom_usuario,
-      )
-      str_lit.download_button(
-          label="📥 Descargar Tarjeta de Categorías Seleccionadas",
-          data=img_bytes_multi_cat,
-          file_name="catalogo_categorias_seleccionadas.png",
-          mime="image/png",
-      )
-    else:
-      str_lit.info(
-          "Selecciona al menos una categoría en el menú de arriba para habilitar"
-          " la descarga."
-      )
-
-  # --- DESCARGA DE ESPÍRITUS INDIVIDUALES ---
-  with str_lit.expander("📥 Descarga de Espíritus Individuales (Libre)"):
-    str_lit.markdown(
-        "Selecciona espíritus específicos de cualquier categoría para generar"
-        " tu tarjeta personalizada."
-    )
-
-    espiritus_individuales_seleccionados = []
-    for cat in categorias_disponibles:
-      str_lit.markdown(f"**Categoría: {cat}**")
-      archivos_de_cat = [
-          f for f in archivos_crudos if obtener_titulo_categoria(f) == cat
-      ]
-      for archivo in archivos_de_cat:
-        nombre_base = os.path.splitext(archivo)[0]
-        nombre_crudo = MAPA_NOMBRES.get(
-            nombre_base,
-            nombre_base.split("_", 1)[-1]
-            .replace("-", " ")
-            .replace("_", " ")
-            .title(),
-        )
-        nombre_mostrado = nombre_crudo.replace("Normal", "").strip()
-        var_a = obtener_variante(archivo)
-
-        if str_lit.checkbox(
-            f"{nombre_mostrado} ({var_a})", key=f"indiv_down_{nombre_base}"
-        ):
-          espiritus_individuales_seleccionados.append(archivo)
-
-    if espiritus_individuales_seleccionados:
-      img_bytes_indiv = generar_imagen_coleccion(
-          espiritus_individuales_seleccionados,
-          str_lit.session_state.seleccionados,
-          str_lit.session_state.dominados,
-          titulo_personalizado="SELECCIÓN PERSONALIZADA",
-          usar_fondo_app=True,
-          imagen_custom=fondo_custom_usuario,
-      )
-      str_lit.download_button(
-          label="📥 Descargar Tarjeta de Espíritus Seleccionados",
-          data=img_bytes_indiv,
-          file_name="catalogo_personalizado.png",
-          mime="image/png",
-      )
-    else:
-      str_lit.info("Selecciona al menos un espíritu para generar la tarjeta.")
 
 else:
   str_lit.warning("Aún no he encontrado la carpeta de imágenes.")
