@@ -489,6 +489,9 @@ if os.path.exists(IMG_FOLDER):
             on_change=make_toggle_cat_dom(ids_cat),
         )
 
+    # --- LÍNEA DIVISORIA AÑADIDA AQUÍ ---
+    str_lit.markdown("---")
+
     with str_lit.expander("📌 Marcar por variante"):
       for var in variantes_disponibles:
         ids_var = var_to_ids[var]
