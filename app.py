@@ -75,7 +75,7 @@ def obtener_nombre_limpio(nombre_base):
 
   nombre_formateado = segmento_nombre.replace("_", " ")
 
-  for suf in [" Normal", " Dorado", " Maestro"]:
+  for suf in [" Normal", " Dorado", " Hacker"]:
     if nombre_formateado.endswith(suf):
       nombre_formateado = nombre_formateado[: -len(suf)]
 
@@ -89,8 +89,8 @@ def obtener_variante(nombre_archivo):
 
   if "dorado" in nombre_base:
     return "Dorado"
-  elif "maestro" in nombre_base:
-    return "Maestro"
+  elif "hacker" in nombre_base:
+    return "Hacker"
   else:
     return "Normal"
 
@@ -104,7 +104,6 @@ def generar_imagen_coleccion(
     imagen_custom=None,
 ):
   if not lista_ordenada_archivos:
-    # Retornar una imagen vacía mínima si no hay elementos
     img_vacia = Image.new("RGBA", (400, 150), color=(20, 20, 20, 255))
     buf = io.BytesIO()
     img_vacia.save(buf, format="PNG")
@@ -144,7 +143,9 @@ def generar_imagen_coleccion(
 
   d_ui.rectangle(
       [padding_lateral, 15, ancho_total - padding_lateral, 75],
-      fill=(15, 15, 15, 210),
+      fill=(15, 60, 25, 230),
+      outline=(50, 200, 80, 255),
+      width=2,
   )
 
   for i in range(len(lista_ordenada_archivos)):
@@ -158,11 +159,16 @@ def generar_imagen_coleccion(
       d_ui.rectangle(
           [x - 5, y - 5, x + 75, y + 100],
           fill=(255, 215, 0, 50),
-          outline=(255, 215, 0, 200),
+          outline=(255, 215, 0, 220),
           width=2,
       )
     else:
-      d_ui.rectangle([x - 5, y - 5, x + 75, y + 100], fill=(20, 20, 20, 140))
+      d_ui.rectangle(
+          [x - 5, y - 5, x + 75, y + 100],
+          fill=(10, 30, 15, 160),
+          outline=(60, 210, 90, 220),
+          width=2,
+      )
 
   img_final = Image.alpha_composite(img_final, capa_ui)
 
@@ -344,12 +350,19 @@ if os.path.exists(IMG_FOLDER):
       categorias_disponibles.append(cat)
 
   cat_to_ids = {}
+  variantes_disponibles = ["Normal", "Dorado", "Hacker"]
+  var_to_ids = {v: [] for v in variantes_disponibles}
+
   for f in archivos_crudos:
     cat = obtener_titulo_categoria(f)
     f_id = os.path.splitext(f)[0]
     if cat not in cat_to_ids:
       cat_to_ids[cat] = []
     cat_to_ids[cat].append(f_id)
+
+    var = obtener_variante(f)
+    if var in var_to_ids:
+      var_to_ids[var].append(f_id)
 
   # --- BARRA LATERAL ---
   with str_lit.sidebar:
@@ -462,6 +475,67 @@ if os.path.exists(IMG_FOLDER):
             value=cat_dom_all,
             key=f"exp_dom_{cat}",
             on_change=make_toggle_cat_dom(ids_cat),
+        )
+
+    # --- EXPANDERS DE VARIANTE (ACTUALIZADO A HACKER) ---
+    with str_lit.expander("📌 Marcar por variante"):
+      for var in variantes_disponibles:
+        ids_var = var_to_ids[var]
+        if not ids_var:
+          continue
+        var_checked_all = all(
+            id_esp in str_lit.session_state.seleccionados for id_esp in ids_var
+        )
+
+        def make_toggle_var_chk(v_ids):
+          def callback():
+            curr_all = all(
+                i in str_lit.session_state.seleccionados for i in v_ids
+            )
+            if curr_all:
+              for i in v_ids:
+                str_lit.session_state.seleccionados.discard(i)
+                str_lit.session_state.dominados.discard(i)
+            else:
+              for i in v_ids:
+                str_lit.session_state.seleccionados.add(i)
+
+          return callback
+
+        str_lit.checkbox(
+            f"{var}",
+            value=var_checked_all,
+            key=f"exp_chk_var_{var}",
+            on_change=make_toggle_var_chk(ids_var),
+        )
+
+    with str_lit.expander("👑 Dominar por variante"):
+      for var in variantes_disponibles:
+        ids_var = var_to_ids[var]
+        if not ids_var:
+          continue
+        var_dom_all = all(
+            id_esp in str_lit.session_state.dominados for id_esp in ids_var
+        )
+
+        def make_toggle_var_dom(v_ids):
+          def callback():
+            curr_all = all(i in str_lit.session_state.dominados for i in v_ids)
+            if curr_all:
+              for i in v_ids:
+                str_lit.session_state.dominados.discard(i)
+            else:
+              for i in v_ids:
+                str_lit.session_state.seleccionados.add(i)
+                str_lit.session_state.dominados.add(i)
+
+          return callback
+
+        str_lit.checkbox(
+            f"{var}",
+            value=var_dom_all,
+            key=f"exp_dom_var_{var}",
+            on_change=make_toggle_var_dom(ids_var),
         )
 
     str_lit.markdown("---")
@@ -611,7 +685,6 @@ if os.path.exists(IMG_FOLDER):
   )
 
   if archivos_ordenados:
-    # 1. Opción General
     img_bytes = generar_imagen_coleccion(
         archivos_ordenados,
         str_lit.session_state.seleccionados,
@@ -663,7 +736,6 @@ if os.path.exists(IMG_FOLDER):
           " tu tarjeta personalizada:"
       )
 
-      # Botones rápidos de selección dentro del expander
       c_sel_all, c_des_all = str_lit.columns(2)
       with c_sel_all:
         if str_lit.button("Seleccionar Todos para Personalizada"):
@@ -679,7 +751,6 @@ if os.path.exists(IMG_FOLDER):
 
       str_lit.markdown("")
 
-      # Cuadrícula para marcar elementos personalizados
       cols_custom = str_lit.columns(4)
       for idx, archivo in enumerate(archivos_ordenados):
         f_id = os.path.splitext(archivo)[0]
@@ -700,7 +771,6 @@ if os.path.exists(IMG_FOLDER):
           else:
             str_lit.session_state.custom_tarjeta_ids.discard(f_id)
 
-    # Filtrar los archivos que están marcados en el custom state
     archivos_custom_finales = [
         f
         for f in archivos_ordenados
