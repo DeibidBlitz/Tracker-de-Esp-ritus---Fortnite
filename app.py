@@ -36,6 +36,18 @@ if os.path.exists(IMAGEN_FONDO_APP_PATH):
     div[data-baseweb="select"] {{
         max-width: 300px;
     }}
+    
+    /* --- ESTILO PARA RECREAR EL RECTÁNGULO LIMPIO ORIGINAL --- */
+    div.stCheckbox {{
+        background-color: rgba(20, 20, 30, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 5px 10px;
+        border-radius: 8px;
+        margin-bottom: 5px;
+    }}
+    div.stCheckbox:hover {{
+        border-color: rgba(255, 255, 255, 0.5);
+    }}
     </style>
     """
   str_lit.markdown(custom_css, unsafe_allow_html=True)
@@ -754,6 +766,7 @@ if os.path.exists(IMG_FOLDER):
           str_lit.rerun()
       with c_des_all:
         if str_lit.button("Deseleccionar Todos"):
+          str_lit.session_state.custom_tarjena_ids = set() # type: ignore
           str_lit.session_state.custom_tarjeta_ids.clear()
           str_lit.rerun()
 
