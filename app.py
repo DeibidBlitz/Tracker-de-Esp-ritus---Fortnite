@@ -367,9 +367,21 @@ if os.path.exists(IMG_FOLDER):
   # --- BARRA LATERAL ---
   with str_lit.sidebar:
     str_lit.header("⚙️ Opciones")
-    filtro_vista = str_lit.radio(
-        "Filtrar vista", ["Todos", "Pendientes", "Dominados"]
+
+    # --- NUEVOS FILTROS POR CATEGORÍA Y VARIANTE EN LA BARRA LATERAL ---
+    str_lit.markdown("**Filtrar por Categoría**")
+    filtro_cat_lateral = str_lit.selectbox(
+        "Categoría", ["Todas"] + categorias_disponibles, label_visibility="collapsed"
     )
+
+    str_lit.markdown("")
+    str_lit.markdown("**Filtrar por Variante**")
+    filtro_var_lateral = str_lit.selectbox(
+        "Variante",
+        ["Todas las variantes"] + variantes_disponibles,
+        label_visibility="collapsed",
+    )
+
     str_lit.markdown("---")
 
     is_all_checked = all(
@@ -566,30 +578,22 @@ if os.path.exists(IMG_FOLDER):
 
   str_lit.markdown("---")
 
-  # --- FILTROS Y BUSCADOR ---
-  col_busqueda, col_cat = str_lit.columns([2, 2])
-  with col_busqueda:
-    busqueda_texto = str_lit.text_input(
-        "🔍 Buscar espíritu por nombre",
-        value="",
-        placeholder="Escribe el nombre del espíritu...",
-    )
-  with col_cat:
-    opciones_menu_cat = ["Todos"] + categorias_disponibles
-    categoria_seleccionada = str_lit.selectbox(
-        "🎯 Filtrar por categoría",
-        opciones_menu_cat,
-        label_visibility="visible",
-    )
+  # --- BUSCADOR ---
+  busqueda_texto = str_lit.text_input(
+      "🔍 Buscar espíritu por nombre",
+      value="",
+      placeholder="Escribe el nombre del espíritu...",
+  )
 
   str_lit.subheader("📋 Lista de Colección")
 
   for categoria, grupo in groupby(
       archivos_ordenados, key=obtener_titulo_categoria
   ):
+    # Aplicar filtro de categoría de la barra lateral
     if (
-        categoria_seleccionada != "Todos"
-        and categoria != categoria_seleccionada
+        filtro_cat_lateral != "Todas"
+        and categoria != filtro_cat_lateral
     ):
       continue
 
@@ -598,11 +602,13 @@ if os.path.exists(IMG_FOLDER):
     grupo_filtrado = []
     for archivo in lista_grupo:
       nombre_base = os.path.splitext(archivo)[0]
-      is_dom = nombre_base in str_lit.session_state.dominados
+      variante_actual = obtener_variante(archivo)
 
-      if filtro_vista == "Pendientes" and is_dom:
-        continue
-      if filtro_vista == "Dominados" and not is_dom:
+      # Aplicar filtro de variante de la barra lateral
+      if (
+          filtro_var_lateral != "Todas las variantes"
+          and variante_actual != filtro_var_lateral
+      ):
         continue
 
       nombre_mostrado = obtener_nombre_limpio(nombre_base)
@@ -629,7 +635,6 @@ if os.path.exists(IMG_FOLDER):
 
       with cols[i % 5]:
         str_lit.image(f"{IMG_FOLDER}/{archivo}", width=100)
-        # --- SE ELIMINÓ LA LÍNEA QUE MOSTRABA LA VARIANTE EN TEXTO ---
         str_lit.markdown(
             f"<div style='text-align: center; font-weight: bold; font-size:"
             f" 13px; margin-bottom: 5px;'>{nombre_mostrado}</div>",
