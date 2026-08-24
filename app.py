@@ -477,7 +477,6 @@ if os.path.exists(IMG_FOLDER):
             on_change=make_toggle_cat_dom(ids_cat),
         )
 
-    # --- EXPANDERS DE VARIANTE (ACTUALIZADO A HACKER) ---
     with str_lit.expander("📌 Marcar por variante"):
       for var in variantes_disponibles:
         ids_var = var_to_ids[var]
@@ -583,7 +582,7 @@ if os.path.exists(IMG_FOLDER):
         label_visibility="visible",
     )
 
-  str_lit.subheader("📋 Lista de Colección (Agrupada por Categoría)")
+  str_lit.subheader("📋 Lista de Colección")
 
   for categoria, grupo in groupby(
       archivos_ordenados, key=obtener_titulo_categoria
@@ -620,22 +619,20 @@ if os.path.exists(IMG_FOLDER):
     if not grupo_filtrado:
       continue
 
-    str_lit.markdown(f"### Categoría: {categoria}")
+    str_lit.markdown(f"### {categoria}")
     cols = str_lit.columns(5)
 
     for i, archivo in enumerate(grupo_filtrado):
       nombre_base = os.path.splitext(archivo)[0]
 
       nombre_mostrado = obtener_nombre_limpio(nombre_base)
-      variante_actual = obtener_variante(archivo)
 
       with cols[i % 5]:
         str_lit.image(f"{IMG_FOLDER}/{archivo}", width=100)
+        # --- SE ELIMINÓ LA LÍNEA QUE MOSTRABA LA VARIANTE EN TEXTO ---
         str_lit.markdown(
             f"<div style='text-align: center; font-weight: bold; font-size:"
-            f" 13px; margin-bottom: 2px;'>{nombre_mostrado}</div>"
-            f"<div style='text-align: center; color: #aaa; font-size:"
-            f" 11px; margin-bottom: 5px;'>({variante_actual})</div>",
+            f" 13px; margin-bottom: 5px;'>{nombre_mostrado}</div>",
             unsafe_allow_html=True,
         )
 
