@@ -63,6 +63,17 @@ def obtener_titulo_categoria(nombre_archivo):
   return "General"
 
 
+def obtener_variante(nombre_archivo):
+  nombre_base = os.path.splitext(nombre_archivo)[0].lower()
+
+  if "dorado" in nombre_base:
+    return "Dorado"
+  elif "hacker" in nombre_base:
+    return "Hacker"
+  else:
+    return "Normal"
+
+
 def obtener_nombre_limpio(nombre_base):
   partes_guion = nombre_base.split("-")
 
@@ -79,20 +90,16 @@ def obtener_nombre_limpio(nombre_base):
     if nombre_formateado.endswith(suf):
       nombre_formateado = nombre_formateado[: -len(suf)]
 
-  nombre_formateado = re.sub(r"^\d+\s*", "", nombre_formateado)
+  nombre_formateado = re.sub(r"^\d+\s*", "", nombre_formateado).strip()
 
-  return nombre_formateado.strip()
+  # Agregar variante al nombre excepto si es Normal
+  variante = obtener_variante(nombre_base + ".png")
+  if variante == "Dorado":
+    nombre_formateado += " Dorado"
+  elif variante == "Hacker":
+    nombre_formateado += " Hacker"
 
-
-def obtener_variante(nombre_archivo):
-  nombre_base = os.path.splitext(nombre_archivo)[0].lower()
-
-  if "dorado" in nombre_base:
-    return "Dorado"
-  elif "hacker" in nombre_base:
-    return "Hacker"
-  else:
-    return "Normal"
+  return nombre_formateado
 
 
 def generar_imagen_coleccion(
@@ -368,7 +375,6 @@ if os.path.exists(IMG_FOLDER):
   with str_lit.sidebar:
     str_lit.header("⚙️ Opciones")
 
-    # --- NUEVOS FILTROS POR CATEGORÍA Y VARIANTE EN LA BARRA LATERAL ---
     str_lit.markdown("**Filtrar por Categoría**")
     filtro_cat_lateral = str_lit.selectbox(
         "Categoría", ["Todas"] + categorias_disponibles, label_visibility="collapsed"
@@ -489,7 +495,6 @@ if os.path.exists(IMG_FOLDER):
             on_change=make_toggle_cat_dom(ids_cat),
         )
 
-    # --- LÍNEA DIVISORIA AÑADIDA AQUÍ ---
     str_lit.markdown("---")
 
     with str_lit.expander("📌 Marcar por variante"):
@@ -593,7 +598,6 @@ if os.path.exists(IMG_FOLDER):
   for categoria, grupo in groupby(
       archivos_ordenados, key=obtener_titulo_categoria
   ):
-    # Aplicar filtro de categoría de la barra lateral
     if (
         filtro_cat_lateral != "Todas"
         and categoria != filtro_cat_lateral
@@ -607,7 +611,6 @@ if os.path.exists(IMG_FOLDER):
       nombre_base = os.path.splitext(archivo)[0]
       variante_actual = obtener_variante(archivo)
 
-      # Aplicar filtro de variante de la barra lateral
       if (
           filtro_var_lateral != "Todas las variantes"
           and variante_actual != filtro_var_lateral
