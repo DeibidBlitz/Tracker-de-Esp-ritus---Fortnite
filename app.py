@@ -8,10 +8,6 @@ import qrcode
 import re
 import streamlit as str_lit
 
-# --- CONFIGURACIÓN DE URL DE LA APP ---
-# ¡CAMBIA ESTA URL POR EL ENLACE REAL DE TU APLICACIÓN EN STREAMLIT CLOUD!
-URL_BASE_APP = "https://linktr.ee/deibid_blitz"
-
 # --- CONFIGURACIÓN DE CARPETAS Y ARCHIVOS ---
 IMG_FOLDER = "imagenes"
 IMAGEN_FONDO_EXPORT_PATH = os.path.join(IMG_FOLDER, "fondo_catalogo.png")
@@ -57,68 +53,12 @@ if os.path.exists(IMAGEN_FONDO_APP_PATH):
     """
   str_lit.markdown(custom_css, unsafe_allow_html=True)
 
-# --- CARGAR ARCHIVOS INICIALES PARA TENER LA LISTA LISTA ---
-if os.path.exists(IMG_FOLDER):
-  archivos_ignorar = {
-      "check_verde.png",
-      "corona.png",
-      "fondo_app.png",
-      "fondo_catalogo.png",
-  }
-  archivos_crudos = sorted([
-      f
-      for f in os.listdir(IMG_FOLDER)
-      if f.lower().endswith(".png")
-      and not f.startswith("num_")
-      and f.lower() not in archivos_ignorar
-  ])
-  archivos_ordenados = list(archivos_crudos)
-  todos_los_ids = [os.path.splitext(f)[0] for f in archivos_ordenados]
-else:
-  archivos_ordenados = []
-  todos_los_ids = []
-
-# --- INICIALIZACIÓN DE ESTADOS DE SESIÓN Y LECTURA DE URL ---
+# --- INICIALIZACIÓN DE ESTADOS DE SESIÓN ---
 if "seleccionados" not in str_lit.session_state:
   str_lit.session_state.seleccionados = set()
 
 if "dominados" not in str_lit.session_state:
   str_lit.session_state.dominados = set()
-
-if "inicializado_por_url" not in str_lit.session_state:
-  str_lit.session_state.inicializado_por_url = False
-
-# Leer parámetros desde la URL de Streamlit (ej. ?data=val_sel,val_dom)
-params = str_lit.query_params
-if not str_lit.session_state.inicializado_por_url and "data" in params:
-  try:
-    data_url = params["data"]
-    if "," in data_url:
-      partes = data_url.split(",")
-      val_sel = int(partes[0], 16)
-      val_dom = int(partes[1], 16)
-
-      total_archivos = len(archivos_ordenados)
-      if total_archivos > 0:
-        bin_sel = bin(val_sel)[2:].zfill(total_archivos)
-        bin_dom = bin(val_dom)[2:].zfill(total_archivos)
-
-        todos_ids = [os.path.splitext(f)[0] for f in archivos_ordenados]
-        sel_recuperados = [
-            todos_ids[i] for i, bit in enumerate(bin_sel) if bit == "1"
-        ]
-        dom_recuperados = [
-            todos_ids[i] for i, bit in enumerate(bin_dom) if bit == "1"
-        ]
-
-        str_lit.session_state.seleccionados = set(sel_recuperados)
-        str_lit.session_state.dominados = set(dom_recuperados)
-        str_lit.session_state.mensaje_restauracion = (
-            "✨ ¡Progreso cargado exitosamente desde el enlace de la tarjeta!"
-        )
-  except Exception as e:
-    print(f"Error procesando parámetros de URL: {e}")
-  str_lit.session_state.inicializado_por_url = True
 
 if "custom_tarjeta_ids" not in str_lit.session_state:
   str_lit.session_state.custom_tarjeta_ids = set()
@@ -178,7 +118,7 @@ def obtener_nombre_limpio(nombre_base):
 
 
 def leer_progreso_desde_imagen(imagen_bytes, lista_todos_archivos):
-  """Decodifica el QR (puede leer tanto formato URL como datos hexadecimales puros)."""
+  """Decodifica el QR compacto basado en hexadecimal/bits."""
   try:
     np_arr = np.frombuffer(imagen_bytes, np.uint8)
     img_cv = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
@@ -186,37 +126,27 @@ def leer_progreso_desde_imagen(imagen_bytes, lista_todos_archivos):
     detector = cv2.QRCodeDetector()
     data, _, _ = detector.detectAndDecode(img_cv)
 
-    if data:
-      # Si el QR contiene una URL, extraemos el parámetro 'data' de la query string
-      if "?" in data and "data=" in data:
-        from urllib.parse import parse_qs, urlparse
+    if data and "," in data:
+      partes = data.split(",")
+      val_sel = int(partes[0], 16)
+      val_dom = int(partes[1], 16)
 
-        parsed_url = urlparse(data)
-        query_params = parse_qs(parsed_url.query)
-        if "data" in query_params:
-          data = query_params["data"][0]
+      total_archivos = len(lista_todos_archivos)
+      bin_sel = bin(val_sel)[2:].zfill(total_archivos)
+      bin_dom = bin(val_dom)[2:].zfill(total_archivos)
 
-      if "," in data:
-        partes = data.split(",")
-        val_sel = int(partes[0], 16)
-        val_dom = int(partes[1], 16)
+      todos_ids = [os.path.splitext(f)[0] for f in lista_todos_archivos]
 
-        total_archivos = len(lista_todos_archivos)
-        bin_sel = bin(val_sel)[2:].zfill(total_archivos)
-        bin_dom = bin(val_dom)[2:].zfill(total_archivos)
+      sel_recuperados = [
+          todos_ids[i] for i, bit in enumerate(bin_sel) if bit == "1"
+      ]
+      dom_recuperados = [
+          todos_ids[i] for i, bit in enumerate(bin_dom) if bit == "1"
+      ]
 
-        todos_ids = [os.path.splitext(f)[0] for f in lista_todos_archivos]
-
-        sel_recuperados = [
-            todos_ids[i] for i, bit in enumerate(bin_sel) if bit == "1"
-        ]
-        dom_recuperados = [
-            todos_ids[i] for i, bit in enumerate(bin_dom) if bit == "1"
-        ]
-
-        return sel_recuperados, dom_recuperados
+      return sel_recuperados, dom_recuperados
   except Exception as e:
-    print(f"Error leyendo QR: {e}")
+    print(f"Error leyendo QR compacto: {e}")
   return None, None
 
 
@@ -295,7 +225,7 @@ def generar_imagen_coleccion(
 
   img_final = Image.alpha_composite(img_final, capa_ui)
 
-  # --- CREAR QR CON ENLACE WEB DIRECCIONAL ---
+  # --- CREAR QR ULTRA COMPRIMIDO (BITS A HEXADECIMAL) ---
   bin_sel = "".join(
       "1" if os.path.splitext(f)[0] in seleccionados else "0"
       for f in todos_los_archivos_global
@@ -308,8 +238,7 @@ def generar_imagen_coleccion(
   val_sel = int(bin_sel, 2) if bin_sel else 0
   val_dom = int(bin_dom, 2) if bin_dom else 0
 
-  datos_hex = f"{val_sel:x},{val_dom:x}"
-  datos_qr = f"{URL_BASE_APP.rstrip('/')}/?data={datos_hex}"
+  datos_qr = f"{val_sel:x},{val_dom:x}"
 
   qr_gen = qrcode.QRCode(
       version=1,
@@ -459,8 +388,24 @@ def generar_imagen_coleccion(
   return buf.getvalue()
 
 
-# --- CARGA Y PROCESAMIENTO PRINCIPAL ---
-if archivos_ordenados:
+# --- CARGA Y PROCESAMIENTO INICIAL ---
+if os.path.exists(IMG_FOLDER):
+  archivos_ignorar = {
+      "check_verde.png",
+      "corona.png",
+      "fondo_app.png",
+      "fondo_catalogo.png",
+  }
+  archivos_crudos = sorted([
+      f
+      for f in os.listdir(IMG_FOLDER)
+      if f.lower().endswith(".png")
+      and not f.startswith("num_")
+      and f.lower() not in archivos_ignorar
+  ])
+  archivos_ordenados = list(archivos_crudos)
+  todos_los_ids = [os.path.splitext(f)[0] for f in archivos_ordenados]
+
   categorias_disponibles = []
   for f in archivos_crudos:
     cat = obtener_titulo_categoria(f)
@@ -690,6 +635,7 @@ if archivos_ordenados:
           str_lit.session_state.seleccionados = set(sel_recuperados)
           str_lit.session_state.dominados = set(dom_recuperados)
           str_lit.session_state.file_uploader_key += 1
+          # Guardamos el mensaje en el estado para asegurarnos de que se muestre persistente tras el rerun
           str_lit.session_state.mensaje_restauracion = (
               f"Se ha leído correctamente. ¡Progreso restaurado! "
               f"({len(sel_recuperados)} obtenidos, {len(dom_recuperados)} dominados)"
@@ -701,8 +647,11 @@ if archivos_ordenados:
               "No se pudo detectar ningún código QR válido en esta imagen."
           )
 
+    # Mostrar mensaje de éxito persistente si existe en la sesión
     if str_lit.session_state.mensaje_restauracion:
       str_lit.success(str_lit.session_state.mensaje_restauracion)
+      # Opcional: limpiarlo después de mostrarlo si prefieres que desaparezca al hacer otra acción,
+      # o dejarlo para que el usuario lo vea con calma. Lo dejamos visible.
 
     str_lit.markdown("---")
     str_lit.info("Marca tus progresos y genera tu tarjeta abajo.")
@@ -711,7 +660,7 @@ if archivos_ordenados:
   str_lit.title("✨ Tracker de Espíritus - Fortnite")
   str_lit.markdown(
       "Lleva el control de tus espíritus obtenidos y dominados, y genera tu"
-      " tarjeta personalizada con enlace directo."
+      " tarjeta personalizada."
   )
 
   total_espiritus = len(todos_los_ids)
@@ -796,6 +745,7 @@ if archivos_ordenados:
           if str_lit.button(
               etiqueta_chk, key=f"chk_{nombre_base}", use_container_width=True
           ):
+            # Al modificar manualmente un espíritu, limpiamos también el mensaje de restauración anterior para mantener limpio
             str_lit.session_state.mensaje_restauracion = None
             if is_checked:
               str_lit.session_state.seleccionados.remove(nombre_base)
@@ -845,8 +795,8 @@ if archivos_ordenados:
     )
     str_lit.download_button(
         label=(
-            "📥 Crear y Descargar Tarjeta General (QR con enlace directo"
-            " incluido)"
+            "📥 Crear y Descargar Tarjeta General (Con mini QR de respaldo"
+            " integrado)"
         ),
         data=img_bytes,
         file_name="catalogo_espiritus.png",
