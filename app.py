@@ -2,6 +2,9 @@ from itertools import groupby
 import io
 import os
 from PIL import Image, ImageDraw, ImageFont
+import cv2
+import numpy as np
+import qrcode
 import re
 import streamlit as str_lit
 
@@ -36,8 +39,6 @@ if os.path.exists(IMAGEN_FONDO_APP_PATH):
     div[data-baseweb="select"] {{
         max-width: 300px;
     }}
-    
-    /* --- ESTILO PARA RECREAR EL RECTÁNGULO LIMPIO ORIGINAL --- */
     div.stCheckbox {{
         background-color: rgba(20, 20, 30, 0.6);
         border: 1px solid rgba(255, 255, 255, 0.2);
@@ -62,22 +63,29 @@ if "dominados" not in str_lit.session_state:
 if "custom_tarjeta_ids" not in str_lit.session_state:
   str_lit.session_state.custom_tarjeta_ids = set()
 
+if "file_uploader_key" not in str_lit.session_state:
+  str_lit.session_state.file_uploader_key = 0
+
+if "ultimo_bytes_leidos" not in str_lit.session_state:
+  str_lit.session_state.ultimo_bytes_leidos = None
+
+if "mensaje_restauracion" not in str_lit.session_state:
+  str_lit.session_state.mensaje_restauracion = None
+
 if not os.path.exists(IMG_FOLDER):
   os.makedirs(IMG_FOLDER)
 
 
-# --- FUNCIONES AUXILIARES LIMPIAS ---
+# --- FUNCIONES AUXILIARES ---
 def obtener_titulo_categoria(nombre_archivo):
   partes = nombre_archivo.split("-")
   if len(partes) >= 2:
-    cat = partes[1].replace("_", " ").title()
-    return cat
+    return partes[1].replace("_", " ").title()
   return "General"
 
 
 def obtener_variante(nombre_archivo):
   nombre_base = os.path.splitext(nombre_archivo)[0].lower()
-
   if "dorado" in nombre_base:
     return "Dorado"
   elif "hacker" in nombre_base:
@@ -88,7 +96,6 @@ def obtener_variante(nombre_archivo):
 
 def obtener_nombre_limpio(nombre_base):
   partes_guion = nombre_base.split("-")
-
   if len(partes_guion) >= 4:
     segmento_nombre = "-".join(partes_guion[3:])
   elif len(partes_guion) == 3:
@@ -97,27 +104,57 @@ def obtener_nombre_limpio(nombre_base):
     segmento_nombre = nombre_base
 
   nombre_formateado = segmento_nombre.replace("_", " ")
-
   for suf in [" Normal", " Dorado", " Hacker"]:
     if nombre_formateado.endswith(suf):
       nombre_formateado = nombre_formateado[: -len(suf)]
 
   nombre_formateado = re.sub(r"^\d+\s*", "", nombre_formateado).strip()
-
-  # Agregar variante al nombre excepto si es Normal
   variante = obtener_variante(nombre_base + ".png")
   if variante == "Dorado":
     nombre_formateado += " Dorado"
   elif variante == "Hacker":
     nombre_formateado += " Hacker"
-
   return nombre_formateado
+
+
+def leer_progreso_desde_imagen(imagen_bytes, lista_todos_archivos):
+  """Decodifica el QR compacto basado en hexadecimal/bits."""
+  try:
+    np_arr = np.frombuffer(imagen_bytes, np.uint8)
+    img_cv = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+    detector = cv2.QRCodeDetector()
+    data, _, _ = detector.detectAndDecode(img_cv)
+
+    if data and "," in data:
+      partes = data.split(",")
+      val_sel = int(partes[0], 16)
+      val_dom = int(partes[1], 16)
+
+      total_archivos = len(lista_todos_archivos)
+      bin_sel = bin(val_sel)[2:].zfill(total_archivos)
+      bin_dom = bin(val_dom)[2:].zfill(total_archivos)
+
+      todos_ids = [os.path.splitext(f)[0] for f in lista_todos_archivos]
+
+      sel_recuperados = [
+          todos_ids[i] for i, bit in enumerate(bin_sel) if bit == "1"
+      ]
+      dom_recuperados = [
+          todos_ids[i] for i, bit in enumerate(bin_dom) if bit == "1"
+      ]
+
+      return sel_recuperados, dom_recuperados
+  except Exception as e:
+    print(f"Error leyendo QR compacto: {e}")
+  return None, None
 
 
 def generar_imagen_coleccion(
     lista_ordenada_archivos,
     seleccionados,
     dominados,
+    todos_los_archivos_global,
     titulo_personalizado=None,
     usar_fondo_app=False,
     imagen_custom=None,
@@ -131,14 +168,12 @@ def generar_imagen_coleccion(
   columnas = 10
   ancho_celda = 90
   alto_celda = 110
-
   padding_lateral = 20
   padding_superior = 90
-
   filas = (len(lista_ordenada_archivos) // columnas) + 1
 
   ancho_total = (columnas * ancho_celda) + (padding_lateral * 2)
-  alto_total = (filas * alto_celda) + padding_superior + 20
+  alto_total = (filas * alto_celda) + padding_superior + 50
 
   ruta_fondo = (
       IMAGEN_FONDO_APP_PATH
@@ -170,7 +205,6 @@ def generar_imagen_coleccion(
   for i in range(len(lista_ordenada_archivos)):
     x = padding_lateral + (i % columnas) * ancho_celda + 10
     y = padding_superior + (i // columnas) * alto_celda + 10
-
     nombre_base = os.path.splitext(lista_ordenada_archivos[i])[0]
     is_dom = nombre_base in dominados
 
@@ -191,6 +225,37 @@ def generar_imagen_coleccion(
 
   img_final = Image.alpha_composite(img_final, capa_ui)
 
+  # --- CREAR QR ULTRA COMPRIMIDO (BITS A HEXADECIMAL) ---
+  bin_sel = "".join(
+      "1" if os.path.splitext(f)[0] in seleccionados else "0"
+      for f in todos_los_archivos_global
+  )
+  bin_dom = "".join(
+      "1" if os.path.splitext(f)[0] in dominados else "0"
+      for f in todos_los_archivos_global
+  )
+
+  val_sel = int(bin_sel, 2) if bin_sel else 0
+  val_dom = int(bin_dom, 2) if bin_dom else 0
+
+  datos_qr = f"{val_sel:x},{val_dom:x}"
+
+  qr_gen = qrcode.QRCode(
+      version=1,
+      error_correction=qrcode.constants.ERROR_CORRECT_M,
+      box_size=2,
+      border=1,
+  )
+  qr_gen.add_data(datos_qr)
+  qr_gen.make(fit=True)
+  img_qr_pil = qr_gen.make_image(fill_color="black", back_color="white").convert(
+      "RGBA"
+  )
+
+  pos_qr_x = ancho_total - padding_lateral - img_qr_pil.width - 10
+  pos_qr_y = alto_total - img_qr_pil.height - 15
+  img_final.paste(img_qr_pil, (pos_qr_x, pos_qr_y), img_qr_pil)
+
   ruta_fuente = os.path.join(IMG_FOLDER, "BURBANK.ttf")
   try:
     font_principal = ImageFont.truetype(ruta_fuente, 28)
@@ -200,33 +265,19 @@ def generar_imagen_coleccion(
     font_contador = ImageFont.load_default()
 
   d = ImageDraw.Draw(img_final)
-
   texto_titulo = (
       titulo_personalizado
       if titulo_personalizado
       else "MI COLECCIÓN DE ESPÍRITUS"
   )
-  pos_x_titulo = padding_lateral + 15
-  pos_y_titulo = 28
-
-  for dx, dy in [
-      (-2, 0),
-      (2, 0),
-      (0, -2),
-      (0, 2),
-      (-2, -2),
-      (2, 2),
-      (-2, 2),
-      (2, -2),
-  ]:
-    d.text(
-        (pos_x_titulo + dx, pos_y_titulo + dy),
-        texto_titulo,
-        fill=(0, 0, 0, 255),
-        font=font_principal,
-    )
   d.text(
-      (pos_x_titulo, pos_y_titulo),
+      (padding_lateral + 17, 30),
+      texto_titulo,
+      fill=(0, 0, 0, 255),
+      font=font_principal,
+  )
+  d.text(
+      (padding_lateral + 15, 28),
       texto_titulo,
       fill=(255, 255, 255, 255),
       font=font_principal,
@@ -246,17 +297,16 @@ def generar_imagen_coleccion(
   pos_y_iconos = 32
   pos_y_texto = 33
 
-  img_check_mini = None
-  if os.path.exists(CHECK_ICON_PATH):
-    img_check_mini = (
-        Image.open(CHECK_ICON_PATH).convert("RGBA").resize((22, 22))
-    )
-
-  img_corona_mini = None
-  if os.path.exists(CORONA_ICON_PATH):
-    img_corona_mini = (
-        Image.open(CORONA_ICON_PATH).convert("RGBA").resize((24, 24))
-    )
+  img_check_mini = (
+      Image.open(CHECK_ICON_PATH).convert("RGBA").resize((22, 22))
+      if os.path.exists(CHECK_ICON_PATH)
+      else None
+  )
+  img_corona_mini = (
+      Image.open(CORONA_ICON_PATH).convert("RGBA").resize((24, 24))
+      if os.path.exists(CORONA_ICON_PATH)
+      else None
+  )
 
   current_x = pos_x_base
   if img_check_mini:
@@ -266,20 +316,13 @@ def generar_imagen_coleccion(
     d.text((current_x, pos_y_texto), "✓", fill=(0, 255, 120), font=font_contador)
     current_x += 20
 
-  texto_obt = f"{obtenidos_totales}/{total_items}"
-  d.text(
-      (current_x, pos_y_texto), texto_obt, fill=(255, 255, 255), font=font_contador
-  )
-  current_x += 70
-
   d.text(
       (current_x, pos_y_texto),
-      "/",
-      fill=(150, 150, 150),
+      f"{obtenidos_totales}/{total_items}",
+      fill=(255, 255, 255),
       font=font_contador,
   )
-  current_x += 20
-
+  current_x += 90
   if img_corona_mini:
     img_final.paste(
         img_corona_mini, (current_x, pos_y_iconos - 2), img_corona_mini
@@ -291,26 +334,29 @@ def generar_imagen_coleccion(
     )
     current_x += 25
 
-  texto_dom = f"{dominados_totales}/{total_items}"
   d.text(
-      (current_x, pos_y_texto), texto_dom, fill=(255, 255, 255), font=font_contador
+      (current_x, pos_y_texto),
+      f"{dominados_totales}/{total_items}",
+      fill=(255, 255, 255),
+      font=font_contador,
   )
 
-  img_check = None
-  if os.path.exists(CHECK_ICON_PATH):
-    img_check = Image.open(CHECK_ICON_PATH).convert("RGBA").resize((26, 26))
-
-  img_corona = None
-  if os.path.exists(CORONA_ICON_PATH):
-    img_corona = Image.open(CORONA_ICON_PATH).convert("RGBA").resize((32, 32))
+  img_check = (
+      Image.open(CHECK_ICON_PATH).convert("RGBA").resize((26, 26))
+      if os.path.exists(CHECK_ICON_PATH)
+      else None
+  )
+  img_corona = (
+      Image.open(CORONA_ICON_PATH).convert("RGBA").resize((32, 32))
+      if os.path.exists(CORONA_ICON_PATH)
+      else None
+  )
 
   for i, archivo in enumerate(lista_ordenada_archivos):
     ruta = os.path.join(IMG_FOLDER, archivo)
     img_espiritu = Image.open(ruta).convert("RGBA").resize((70, 70))
-
     x = padding_lateral + (i % columnas) * ancho_celda + 10
     y = padding_superior + (i // columnas) * alto_celda + 10
-
     img_final.paste(img_espiritu, (x, y), img_espiritu)
 
     nombre_base = os.path.splitext(archivo)[0]
@@ -350,7 +396,6 @@ if os.path.exists(IMG_FOLDER):
       "fondo_app.png",
       "fondo_catalogo.png",
   }
-
   archivos_crudos = sorted([
       f
       for f in os.listdir(IMG_FOLDER)
@@ -358,7 +403,6 @@ if os.path.exists(IMG_FOLDER):
       and not f.startswith("num_")
       and f.lower() not in archivos_ignorar
   ])
-
   archivos_ordenados = list(archivos_crudos)
   todos_los_ids = [os.path.splitext(f)[0] for f in archivos_ordenados]
 
@@ -378,7 +422,6 @@ if os.path.exists(IMG_FOLDER):
     if cat not in cat_to_ids:
       cat_to_ids[cat] = []
     cat_to_ids[cat].append(f_id)
-
     var = obtener_variante(f)
     if var in var_to_ids:
       var_to_ids[var].append(f_id)
@@ -569,6 +612,47 @@ if os.path.exists(IMG_FOLDER):
             on_change=make_toggle_var_dom(ids_var),
         )
 
+    # --- RESTAURAR PROGRESO POR TARJETA (BETA) ---
+    str_lit.markdown("---")
+    str_lit.subheader("📱 Restaurar Progreso por Tarjeta (Beta)")
+
+    tarjeta_subida = str_lit.file_uploader(
+        "Escanear tarjeta y restablecer espiritus",
+        type=["png", "jpg", "jpeg"],
+        key=f"uploader_{str_lit.session_state.file_uploader_key}",
+    )
+
+    if tarjeta_subida is not None:
+      bytes_actuales = tarjeta_subida.getvalue()
+      if str_lit.session_state.ultimo_bytes_leidos != bytes_actuales:
+        str_lit.session_state.ultimo_bytes_leidos = bytes_actuales
+
+        sel_recuperados, dom_recuperados = leer_progreso_desde_imagen(
+            bytes_actuales, archivos_ordenados
+        )
+
+        if sel_recuperados is not None:
+          str_lit.session_state.seleccionados = set(sel_recuperados)
+          str_lit.session_state.dominados = set(dom_recuperados)
+          str_lit.session_state.file_uploader_key += 1
+          # Guardamos el mensaje en el estado para asegurarnos de que se muestre persistente tras el rerun
+          str_lit.session_state.mensaje_restauracion = (
+              f"Se ha leído correctamente. ¡Progreso restaurado! "
+              f"({len(sel_recuperados)} obtenidos, {len(dom_recuperados)} dominados)"
+          )
+          str_lit.rerun()
+        else:
+          str_lit.session_state.mensaje_restauracion = None
+          str_lit.error(
+              "No se pudo detectar ningún código QR válido en esta imagen."
+          )
+
+    # Mostrar mensaje de éxito persistente si existe en la sesión
+    if str_lit.session_state.mensaje_restauracion:
+      str_lit.success(str_lit.session_state.mensaje_restauracion)
+      # Opcional: limpiarlo después de mostrarlo si prefieres que desaparezca al hacer otra acción,
+      # o dejarlo para que el usuario lo vea con calma. Lo dejamos visible.
+
     str_lit.markdown("---")
     str_lit.info("Marca tus progresos y genera tu tarjeta abajo.")
 
@@ -598,7 +682,6 @@ if os.path.exists(IMG_FOLDER):
 
   str_lit.markdown("---")
 
-  # --- BUSCADOR ---
   busqueda_texto = str_lit.text_input(
       "🔍 Buscar espíritu por nombre",
       value="",
@@ -610,14 +693,10 @@ if os.path.exists(IMG_FOLDER):
   for categoria, grupo in groupby(
       archivos_ordenados, key=obtener_titulo_categoria
   ):
-    if (
-        filtro_cat_lateral != "Todas"
-        and categoria != filtro_cat_lateral
-    ):
+    if filtro_cat_lateral != "Todas" and categoria != filtro_cat_lateral:
       continue
 
     lista_grupo = list(grupo)
-
     grupo_filtrado = []
     for archivo in lista_grupo:
       nombre_base = os.path.splitext(archivo)[0]
@@ -630,14 +709,12 @@ if os.path.exists(IMG_FOLDER):
         continue
 
       nombre_mostrado = obtener_nombre_limpio(nombre_base)
-
       if (
           busqueda_texto
           and busqueda_texto.lower() not in nombre_mostrado.lower()
           and busqueda_texto.lower() not in nombre_base.lower()
       ):
         continue
-
       grupo_filtrado.append(archivo)
 
     if not grupo_filtrado:
@@ -648,7 +725,6 @@ if os.path.exists(IMG_FOLDER):
 
     for i, archivo in enumerate(grupo_filtrado):
       nombre_base = os.path.splitext(archivo)[0]
-
       nombre_mostrado = obtener_nombre_limpio(nombre_base)
 
       with cols[i % 5]:
@@ -669,6 +745,8 @@ if os.path.exists(IMG_FOLDER):
           if str_lit.button(
               etiqueta_chk, key=f"chk_{nombre_base}", use_container_width=True
           ):
+            # Al modificar manualmente un espíritu, limpiamos también el mensaje de restauración anterior para mantener limpio
+            str_lit.session_state.mensaje_restauracion = None
             if is_checked:
               str_lit.session_state.seleccionados.remove(nombre_base)
               if nombre_base in str_lit.session_state.dominados:
@@ -683,6 +761,7 @@ if os.path.exists(IMG_FOLDER):
             if str_lit.button(
                 etiqueta_dom, key=f"dom_{nombre_base}", use_container_width=True
             ):
+              str_lit.session_state.mensaje_restauracion = None
               if is_dom:
                 str_lit.session_state.dominados.remove(nombre_base)
               else:
@@ -702,6 +781,7 @@ if os.path.exists(IMG_FOLDER):
   fondo_custom_usuario = str_lit.file_uploader(
       "🎨 (Opcional) Subir imagen de fondo personalizada para la tarjeta",
       type=["png", "jpg", "jpeg", "webp"],
+      key="fondo_personalizado_uploader",
   )
 
   if archivos_ordenados:
@@ -709,11 +789,15 @@ if os.path.exists(IMG_FOLDER):
         archivos_ordenados,
         str_lit.session_state.seleccionados,
         str_lit.session_state.dominados,
+        archivos_ordenados,
         usar_fondo_app=False,
         imagen_custom=fondo_custom_usuario,
     )
     str_lit.download_button(
-        label="📥 Crear y Descargar Imagen de Colección (General)",
+        label=(
+            "📥 Crear y Descargar Tarjeta General (Con mini QR de respaldo"
+            " integrado)"
+        ),
         data=img_bytes,
         file_name="catalogo_espiritus.png",
         mime="image/png",
@@ -731,6 +815,7 @@ if os.path.exists(IMG_FOLDER):
             archivos_cat,
             str_lit.session_state.seleccionados,
             str_lit.session_state.dominados,
+            archivos_ordenados,
             titulo_personalizado=f"CATEGORÍA: {cat.upper()}",
             usar_fondo_app=False,
             imagen_custom=fondo_custom_usuario,
@@ -766,7 +851,6 @@ if os.path.exists(IMG_FOLDER):
           str_lit.rerun()
       with c_des_all:
         if str_lit.button("Deseleccionar Todos"):
-          str_lit.session_state.custom_tarjena_ids = set() # type: ignore
           str_lit.session_state.custom_tarjeta_ids.clear()
           str_lit.rerun()
 
@@ -778,7 +862,6 @@ if os.path.exists(IMG_FOLDER):
         nombre_limpio = obtener_nombre_limpio(f_id)
         variante = obtener_variante(archivo)
         etiqueta_checkbox = f"{nombre_limpio} ({variante})"
-
         is_selected_custom = f_id in str_lit.session_state.custom_tarjeta_ids
 
         with cols_custom[idx % 4]:
@@ -797,7 +880,6 @@ if os.path.exists(IMG_FOLDER):
         for f in archivos_ordenados
         if os.path.splitext(f)[0] in str_lit.session_state.custom_tarjeta_ids
     ]
-
     titulo_custom_input = str_lit.text_input(
         "🏷️ Título para la tarjeta personalizada",
         value="MI SELECCIÓN DE ESPÍRITUS",
@@ -808,6 +890,7 @@ if os.path.exists(IMG_FOLDER):
           archivos_custom_finales,
           str_lit.session_state.seleccionados,
           str_lit.session_state.dominados,
+          archivos_ordenados,
           titulo_personalizado=titulo_custom_input,
           usar_fondo_app=False,
           imagen_custom=fondo_custom_usuario,
@@ -826,9 +909,7 @@ if os.path.exists(IMG_FOLDER):
           "Selecciona al menos un espíritu en el menú desplegable de arriba"
           " para generar tu tarjeta personalizada."
       )
-
   else:
     str_lit.info("No hay espíritus disponibles para descargar.")
-
 else:
   str_lit.warning("Aún no he encontrado la carpeta de imágenes.")
