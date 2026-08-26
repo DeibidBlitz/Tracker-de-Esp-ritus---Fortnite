@@ -635,7 +635,6 @@ if os.path.exists(IMG_FOLDER):
           str_lit.session_state.seleccionados = set(sel_recuperados)
           str_lit.session_state.dominados = set(dom_recuperados)
           str_lit.session_state.file_uploader_key += 1
-          # Guardamos el mensaje en el estado para asegurarnos de que se muestre persistente tras el rerun
           str_lit.session_state.mensaje_restauracion = (
               f"Se ha leído correctamente. ¡Progreso restaurado! "
               f"({len(sel_recuperados)} obtenidos, {len(dom_recuperados)} dominados)"
@@ -647,11 +646,8 @@ if os.path.exists(IMG_FOLDER):
               "No se pudo detectar ningún código QR válido en esta imagen."
           )
 
-    # Mostrar mensaje de éxito persistente si existe en la sesión
     if str_lit.session_state.mensaje_restauracion:
       str_lit.success(str_lit.session_state.mensaje_restauracion)
-      # Opcional: limpiarlo después de mostrarlo si prefieres que desaparezca al hacer otra acción,
-      # o dejarlo para que el usuario lo vea con calma. Lo dejamos visible.
 
     str_lit.markdown("---")
     str_lit.info("Marca tus progresos y genera tu tarjeta abajo.")
@@ -745,7 +741,6 @@ if os.path.exists(IMG_FOLDER):
           if str_lit.button(
               etiqueta_chk, key=f"chk_{nombre_base}", use_container_width=True
           ):
-            # Al modificar manualmente un espíritu, limpiamos también el mensaje de restauración anterior para mantener limpio
             str_lit.session_state.mensaje_restauracion = None
             if is_checked:
               str_lit.session_state.seleccionados.remove(nombre_base)
@@ -804,32 +799,45 @@ if os.path.exists(IMG_FOLDER):
     )
 
     str_lit.markdown("---")
-    str_lit.markdown("#### 📂 Tarjetas por Categoría")
-    cols_cat_dl = str_lit.columns(len(categorias_disponibles) or 1)
-    for idx, cat in enumerate(categorias_disponibles):
-      archivos_cat = [
-          f for f in archivos_ordenados if obtener_titulo_categoria(f) == cat
-      ]
-      if archivos_cat:
-        img_cat_bytes = generar_imagen_coleccion(
-            archivos_cat,
-            str_lit.session_state.seleccionados,
-            str_lit.session_state.dominados,
-            archivos_ordenados,
-            titulo_personalizado=f"CATEGORÍA: {cat.upper()}",
-            usar_fondo_app=False,
-            imagen_custom=fondo_custom_usuario,
-        )
-        with cols_cat_dl[idx % len(cols_cat_dl)]:
-          str_lit.download_button(
-              label=f"📥 Descargar {cat}",
-              data=img_cat_bytes,
-              file_name=f"catalogo_{cat.lower().replace(' ', '_')}.png",
-              mime="image/png",
-              key=f"dl_cat_{cat}",
-          )
+    
+    # --- SECCIÓN OPTIMIZADA: TARJETAS POR CATEGORÍA EN LISTA PLEGABLE ---
+    with str_lit.expander("📁 Tarjetas por Categoría"):
+      str_lit.markdown(
+          "Despliega y genera únicamente la tarjeta de la categoría que"
+          " necesites para optimizar el rendimiento:"
+      )
+      
+      for cat in categorias_disponibles:
+        archivos_cat = [
+            f for f in archivos_ordenados if obtener_titulo_categoria(f) == cat
+        ]
+        if archivos_cat:
+          with str_lit.container():
+            col_info, col_btn = str_lit.columns([2, 1])
+            with col_info:
+              str_lit.markdown(f"**Categoría: {cat}** ({len(archivos_cat)} espíritus)")
+            
+            with col_btn:
+              if str_lit.button(f"📥 Generar {cat}", key=f"gen_btn_cat_{cat}"):
+                with str_lit.spinner(f"Generando tarjeta de {cat}..."):
+                  img_cat_bytes = generar_imagen_coleccion(
+                      archivos_cat,
+                      str_lit.session_state.seleccionados,
+                      str_lit.session_state.dominados,
+                      archivos_ordenados,
+                      titulo_personalizado=f"CATEGORÍA: {cat.upper()}",
+                      usar_fondo_app=False,
+                      imagen_custom=fondo_custom_usuario,
+                  )
+                str_lit.download_button(
+                    label=f"💾 Descargar {cat}.png",
+                    data=img_cat_bytes,
+                    file_name=f"catalogo_{cat.lower().replace(' ', '_')}.png",
+                    mime="image/png",
+                    key=f"dl_cat_file_{cat}",
+                )
+            str_lit.markdown("---")
 
-    str_lit.markdown("---")
     str_lit.markdown("#### ✨ Crear Tarjeta Personalizada (Múltiples Espíritus)")
 
     with str_lit.expander(
