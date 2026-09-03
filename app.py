@@ -88,6 +88,8 @@ def obtener_variante(nombre_archivo):
   nombre_base = os.path.splitext(nombre_archivo)[0].lower()
   if "dorado" in nombre_base:
     return "Dorado"
+  elif "botín hacker" in nombre_base or "botin hacker" in nombre_base:
+    return "Botín Hacker"
   elif "hacker" in nombre_base:
     return "Hacker"
   else:
@@ -104,7 +106,7 @@ def obtener_nombre_limpio(nombre_base):
     segmento_nombre = nombre_base
 
   nombre_formateado = segmento_nombre.replace("_", " ")
-  for suf in [" Normal", " Dorado", " Hacker"]:
+  for suf in [" Normal", " Dorado", " Botin Hacker", " Botín Hacker", " Hacker"]:
     if nombre_formateado.endswith(suf):
       nombre_formateado = nombre_formateado[: -len(suf)]
 
@@ -112,6 +114,8 @@ def obtener_nombre_limpio(nombre_base):
   variante = obtener_variante(nombre_base + ".png")
   if variante == "Dorado":
     nombre_formateado += " Dorado"
+  elif variante == "Botín Hacker":
+    nombre_formateado += " Botín Hacker"
   elif variante == "Hacker":
     nombre_formateado += " Hacker"
   return nombre_formateado
@@ -413,7 +417,7 @@ if os.path.exists(IMG_FOLDER):
       categorias_disponibles.append(cat)
 
   cat_to_ids = {}
-  variantes_disponibles = ["Normal", "Dorado", "Hacker"]
+  variantes_disponibles = ["Normal", "Dorado", "Hacker", "Botín Hacker"]
   var_to_ids = {v: [] for v in variantes_disponibles}
 
   for f in archivos_crudos:
