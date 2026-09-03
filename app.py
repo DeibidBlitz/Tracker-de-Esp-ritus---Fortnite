@@ -76,7 +76,7 @@ if not os.path.exists(IMG_FOLDER):
   os.makedirs(IMG_FOLDER)
 
 
-# --- FUNCIONES AUXILIARES (ADAPTADAS A LA NUEVA NOMENCLATURA) ---
+# --- FUNCIONES AUXILIARES ---
 def obtener_titulo_categoria(nombre_archivo):
   partes = nombre_archivo.split("-")
   if len(partes) >= 2:
@@ -88,12 +88,8 @@ def obtener_variante(nombre_archivo):
   nombre_base = os.path.splitext(nombre_archivo)[0].lower()
   if "dorado" in nombre_base:
     return "Dorado"
-  elif "hacker" in nombre_base and (
-      "botin" in nombre_base or "botín" in nombre_base
-  ):
-    return (
-        "Hacker de Botín"  # Cambiado aquí para que coincida con el juego
-    )
+  elif "hacker" in nombre_base and ("botin" in nombre_base or "botín" in nombre_base):
+    return "Hacker de Botín"
   elif "hacker" in nombre_base:
     return "Hacker"
   else:
@@ -101,15 +97,12 @@ def obtener_variante(nombre_archivo):
 
 
 def obtener_nombre_limpio(nombre_base):
-  # El nombre base del espíritu es el mismo que el título de su categoría
   categoria = obtener_titulo_categoria(nombre_base + ".png")
   variante = obtener_variante(nombre_base + ".png")
   
-  # Si es normal, solo mostramos el nombre de la categoría
   if variante == "Normal":
     return categoria
   else:
-    # Si tiene variante, la añadimos una sola vez de forma limpia
     return f"{categoria} {variante}"
 
 
@@ -409,12 +402,8 @@ if os.path.exists(IMG_FOLDER):
       categorias_disponibles.append(cat)
 
   cat_to_ids = {}
-variantes_disponibles = [
-    "Normal",
-    "Dorado",
-    "Hacker",
-    "Hacker de Botín",
-]  # O "Hacker Botín" si lo prefieres corto
+  variantes_disponibles = ["Normal", "Dorado", "Hacker", "Hacker de Botín"]
+  var_to_ids = {v: [] for v in variantes_disponibles}
 
   for f in archivos_crudos:
     cat = obtener_titulo_categoria(f)
@@ -898,7 +887,7 @@ variantes_disponibles = [
           str_lit.session_state.seleccionados,
           str_lit.session_state.dominados,
           archivos_ordenados,
-          titulo_personalizado=titulo_custom_input,
+        titulo_personalizado=titulo_custom_input,
           usar_fondo_app=False,
           imagen_custom=fondo_custom_usuario,
       )
