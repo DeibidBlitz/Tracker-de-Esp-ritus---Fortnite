@@ -97,25 +97,16 @@ def obtener_variante(nombre_archivo):
 
 
 def obtener_nombre_limpio(nombre_base):
-  partes = nombre_base.split("-")
-  if len(partes) >= 4:
-    segmento_nombre = "-".join(partes[3:])
-  else:
-    segmento_nombre = partes[-1]
-
-  nombre_formateado = segmento_nombre.replace("_", " ")
-  
-  for suf in [" hacker botin", " hacker botín", " botin hacker", " botín hacker", " normal", " dorado", " hacker"]:
-    if nombre_formateado.lower().endswith(suf):
-      nombre_formateado = nombre_formateado[: -len(suf)]
-
-  nombre_formateado = re.sub(r"^\d+\s*", "", nombre_formateado).strip()
+  # El nombre base del espíritu es el mismo que el título de su categoría
+  categoria = obtener_titulo_categoria(nombre_base + ".png")
   variante = obtener_variante(nombre_base + ".png")
   
-  if variante != "Normal":
-    nombre_formateado += f" {variante}"
-    
-  return nombre_formateado.title()
+  # Si es normal, solo mostramos el nombre de la categoría
+  if variante == "Normal":
+    return categoria
+  else:
+    # Si tiene variante, la añadimos una sola vez de forma limpia
+    return f"{categoria} {variante}"
 
 
 def leer_progreso_desde_imagen(imagen_bytes, lista_todos_archivos):
