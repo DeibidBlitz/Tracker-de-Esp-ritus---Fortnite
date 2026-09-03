@@ -88,8 +88,12 @@ def obtener_variante(nombre_archivo):
   nombre_base = os.path.splitext(nombre_archivo)[0].lower()
   if "dorado" in nombre_base:
     return "Dorado"
-  elif "hacker" in nombre_base and ("botin" in nombre_base or "botín" in nombre_base):
-    return "Botín Hacker"
+  elif "hacker" in nombre_base and (
+      "botin" in nombre_base or "botín" in nombre_base
+  ):
+    return (
+        "Hacker de Botín"  # Cambiado aquí para que coincida con el juego
+    )
   elif "hacker" in nombre_base:
     return "Hacker"
   else:
@@ -405,8 +409,12 @@ if os.path.exists(IMG_FOLDER):
       categorias_disponibles.append(cat)
 
   cat_to_ids = {}
-  variantes_disponibles = ["Normal", "Dorado", "Hacker", "Botín Hacker"]
-  var_to_ids = {v: [] for v in variantes_disponibles}
+variantes_disponibles = [
+    "Normal",
+    "Dorado",
+    "Hacker",
+    "Hacker de Botín",
+]  # O "Hacker Botín" si lo prefieres corto
 
   for f in archivos_crudos:
     cat = obtener_titulo_categoria(f)
