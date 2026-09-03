@@ -76,7 +76,7 @@ if not os.path.exists(IMG_FOLDER):
   os.makedirs(IMG_FOLDER)
 
 
-# --- FUNCIONES AUXILIARES ---
+# --- FUNCIONES AUXILIARES (ADAPTADAS A LA NUEVA NOMENCLATURA) ---
 def obtener_titulo_categoria(nombre_archivo):
   partes = nombre_archivo.split("-")
   if len(partes) >= 2:
@@ -85,11 +85,10 @@ def obtener_titulo_categoria(nombre_archivo):
 
 
 def obtener_variante(nombre_archivo):
-  # Normalizamos reemplazando guiones bajos y puntos por espacios
-  nombre_base = os.path.splitext(nombre_archivo)[0].lower().replace("_", " ").replace(".", " ")
+  nombre_base = os.path.splitext(nombre_archivo)[0].lower()
   if "dorado" in nombre_base:
     return "Dorado"
-  elif "botin hacker" in nombre_base or "botín hacker" in nombre_base or ("botin" in nombre_base and "hacker" in nombre_base):
+  elif "hacker" in nombre_base and ("botin" in nombre_base or "botín" in nombre_base):
     return "Botín Hacker"
   elif "hacker" in nombre_base:
     return "Hacker"
@@ -98,30 +97,23 @@ def obtener_variante(nombre_archivo):
 
 
 def obtener_nombre_limpio(nombre_base):
-  partes_guion = nombre_base.split("-")
-  if len(partes_guion) >= 4:
-    segmento_nombre = "-".join(partes_guion[3:])
-  elif len(partes_guion) == 3:
-    segmento_nombre = partes_guion[2]
+  partes = nombre_base.split("-")
+  if len(partes) >= 4:
+    segmento_nombre = "-".join(partes[3:])
   else:
-    segmento_nombre = nombre_base
+    segmento_nombre = partes[-1]
 
-  nombre_formateado = segmento_nombre.replace("_", " ").replace(".", " ")
+  nombre_formateado = segmento_nombre.replace("_", " ")
   
-  # Limpieza de sufijos comunes de variantes
-  for suf in [" botin hacker", " botín hacker", " hacker botin", " hacker botín", " normal", " dorado", " hacker"]:
+  for suf in [" hacker botin", " hacker botín", " botin hacker", " botín hacker", " normal", " dorado", " hacker"]:
     if nombre_formateado.lower().endswith(suf):
       nombre_formateado = nombre_formateado[: -len(suf)]
 
   nombre_formateado = re.sub(r"^\d+\s*", "", nombre_formateado).strip()
   variante = obtener_variante(nombre_base + ".png")
   
-  if variante == "Dorado":
-    nombre_formateado += " Dorado"
-  elif variante == "Botín Hacker":
-    nombre_formateado += " Botín Hacker"
-  elif variante == "Hacker":
-    nombre_formateado += " Hacker"
+  if variante != "Normal":
+    nombre_formateado += f" {variante}"
     
   return nombre_formateado.title()
 
@@ -809,7 +801,6 @@ if os.path.exists(IMG_FOLDER):
 
     str_lit.markdown("---")
     
-    # --- SECCIÓN OPTIMIZADA: TARJETAS POR CATEGORÍA EN LISTA PLEGABLE ---
     with str_lit.expander("📁 Tarjetas por Categoría"):
       str_lit.markdown(
           "Despliega y genera únicamente la tarjeta de la categoría que"
