@@ -85,11 +85,11 @@ def obtener_titulo_categoria(nombre_archivo):
 
 
 def obtener_variante(nombre_archivo):
-  nombre_base = os.path.splitext(nombre_archivo)[0].lower()
+  # Normalizamos reemplazando guiones bajos y puntos por espacios
+  nombre_base = os.path.splitext(nombre_archivo)[0].lower().replace("_", " ").replace(".", " ")
   if "dorado" in nombre_base:
     return "Dorado"
-  # Ponemos esta condición PRIMERO para que atrape el botín hacker antes que el hacker solo
-  elif "botín hacker" in nombre_base or "botin hacker" in nombre_base:
+  elif "botin hacker" in nombre_base or "botín hacker" in nombre_base or ("botin" in nombre_base and "hacker" in nombre_base):
     return "Botín Hacker"
   elif "hacker" in nombre_base:
     return "Hacker"
@@ -106,46 +106,24 @@ def obtener_nombre_limpio(nombre_base):
   else:
     segmento_nombre = nombre_base
 
-  nombre_formateado = segmento_nombre.replace("_", " ")
-  # Limpiamos los sufijos en orden de más largo a más corto
-  for suf in [" Botin Hacker", " Botín Hacker", " Normal", " Dorado", " Hacker"]:
-    if nombre_formateado.endswith(suf):
+  nombre_formateado = segmento_nombre.replace("_", " ").replace(".", " ")
+  
+  # Limpieza de sufijos comunes de variantes
+  for suf in [" botin hacker", " botín hacker", " hacker botin", " hacker botín", " normal", " dorado", " hacker"]:
+    if nombre_formateado.lower().endswith(suf):
       nombre_formateado = nombre_formateado[: -len(suf)]
 
   nombre_formateado = re.sub(r"^\d+\s*", "", nombre_formateado).strip()
   variante = obtener_variante(nombre_base + ".png")
+  
   if variante == "Dorado":
     nombre_formateado += " Dorado"
   elif variante == "Botín Hacker":
     nombre_formateado += " Botín Hacker"
   elif variante == "Hacker":
     nombre_formateado += " Hacker"
-  return nombre_formateado
-
-
-def obtener_nombre_limpio(nombre_base):
-  partes_guion = nombre_base.split("-")
-  if len(partes_guion) >= 4:
-    segmento_nombre = "-".join(partes_guion[3:])
-  elif len(partes_guion) == 3:
-    segmento_nombre = partes_guion[2]
-  else:
-    segmento_nombre = nombre_base
-
-  nombre_formateado = segmento_nombre.replace("_", " ")
-  for suf in [" Normal", " Dorado", " Botin Hacker", " Botín Hacker", " Hacker"]:
-    if nombre_formateado.endswith(suf):
-      nombre_formateado = nombre_formateado[: -len(suf)]
-
-  nombre_formateado = re.sub(r"^\d+\s*", "", nombre_formateado).strip()
-  variante = obtener_variante(nombre_base + ".png")
-  if variante == "Dorado":
-    nombre_formateado += " Dorado"
-  elif variante == "Botín Hacker":
-    nombre_formateado += " Botín Hacker"
-  elif variante == "Hacker":
-    nombre_formateado += " Hacker"
-  return nombre_formateado
+    
+  return nombre_formateado.title()
 
 
 def leer_progreso_desde_imagen(imagen_bytes, lista_todos_archivos):
