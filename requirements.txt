@@ -3,4 +3,3 @@ pillow
 opencv-python-headless
 numpy
 qrcode
-pyzbar
