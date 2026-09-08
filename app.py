@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 import cv2
 import numpy as np
 import qrcode
-from pyzbar.pyzbar import decode as qrcode_decode
+import re
 import streamlit as str_lit
 
 # --- CONFIGURACIÓN DE CARPETAS Y ARCHIVOS ---
@@ -14,7 +14,6 @@ IMAGEN_FONDO_EXPORT_PATH = os.path.join(IMG_FOLDER, "fondo_catalogo.png")
 IMAGEN_FONDO_APP_PATH = os.path.join(IMG_FOLDER, "fondo_app.png")
 CHECK_ICON_PATH = os.path.join(IMG_FOLDER, "check_verde.png")
 CORONA_ICON_PATH = os.path.join(IMG_FOLDER, "corona.png")
-LINKTREE_URL = "https://linktr.ee/deibid_blitz"
 
 str_lit.set_page_config(
     page_title="Tracker de Espíritus", page_icon="✨", layout="wide"
@@ -108,21 +107,13 @@ def obtener_nombre_limpio(nombre_base):
 
 
 def leer_progreso_desde_imagen(imagen_bytes, lista_todos_archivos):
-  """Decodifica el QR ultrarrápido impreso en la tarjeta."""
+  """Decodifica el QR compacto basado en hexadecimal/bits."""
   try:
     np_arr = np.frombuffer(imagen_bytes, np.uint8)
     img_cv = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
-    decoded_objects = qrcode_decode(img_cv)
-    data = None
-    for obj in decoded_objects:
-      try:
-        decoded_text = obj.data.decode("utf-8")
-        if "," in decoded_text and not decoded_text.startswith("http"):
-          data = decoded_text
-          break
-      except Exception:
-        continue
+    detector = cv2.QRCodeDetector()
+    data, _, _ = detector.detectAndDecode(img_cv)
 
     if data and "," in data:
       partes = data.split(",")
@@ -144,7 +135,7 @@ def leer_progreso_desde_imagen(imagen_bytes, lista_todos_archivos):
 
       return sel_recuperados, dom_recuperados
   except Exception as e:
-    print(f"Error leyendo QR de progreso: {e}")
+    print(f"Error leyendo QR compacto: {e}")
   return None, None
 
 
@@ -171,7 +162,7 @@ def generar_imagen_coleccion(
   filas = (len(lista_ordenada_archivos) // columnas) + 1
 
   ancho_total = (columnas * ancho_celda) + (padding_lateral * 2)
-  alto_total = (filas * alto_celda) + padding_superior + 60
+  alto_total = (filas * alto_celda) + padding_superior + 50
 
   ruta_fondo = (
       IMAGEN_FONDO_APP_PATH
@@ -223,7 +214,7 @@ def generar_imagen_coleccion(
 
   img_final = Image.alpha_composite(img_final, capa_ui)
 
-  # --- CREAR CÓDIGO QR DE PROGRESO (MÁS PEQUEÑO Y DISCRETO) ---
+  # --- CREAR QR ULTRA COMPRIMIDO (BITS A HEXADECIMAL) ---
   bin_sel = "".join(
       "1" if os.path.splitext(f)[0] in seleccionados else "0"
       for f in todos_los_archivos_global
@@ -235,38 +226,24 @@ def generar_imagen_coleccion(
 
   val_sel = int(bin_sel, 2) if bin_sel else 0
   val_dom = int(bin_dom, 2) if bin_dom else 0
-  datos_qr_progreso = f"{val_sel:x},{val_dom:x}"
 
-  qr_progreso = qrcode.QRCode(
+  datos_qr = f"{val_sel:x},{val_dom:x}"
+
+  qr_gen = qrcode.QRCode(
       version=1,
       error_correction=qrcode.constants.ERROR_CORRECT_M,
       box_size=2,
       border=1,
   )
-  qr_progreso.add_data(datos_qr_progreso)
-  qr_progreso.make(fit=True)
-  img_qr_prog_pil = qr_progreso.make_image(fill_color="black", back_color="white").convert("RGBA")
-  img_qr_prog_pil = img_qr_prog_pil.resize((38, 38))
-
-  pos_qr_prog_x = ancho_total - padding_lateral - img_qr_prog_pil.width - 10
-  pos_qr_prog_y = alto_total - img_qr_prog_pil.height - 15
-  img_final.paste(img_qr_prog_pil, (pos_qr_prog_x, pos_qr_prog_y), img_qr_prog_pil)
-
-  # --- CREAR CÓDIGO QR PARA EL LINKTREE (MÁS GRANDE Y PROTAGONISTA) ---
-  qr_link = qrcode.QRCode(
-      version=1,
-      error_correction=qrcode.constants.ERROR_CORRECT_M,
-      box_size=2,
-      border=1,
+  qr_gen.add_data(datos_qr)
+  qr_gen.make(fit=True)
+  img_qr_pil = qr_gen.make_image(fill_color="black", back_color="white").convert(
+      "RGBA"
   )
-  qr_link.add_data(LINKTREE_URL)
-  qr_link.make(fit=True)
-  img_qr_link_pil = qr_link.make_image(fill_color="black", back_color="white").convert("RGBA")
-  img_qr_link_pil = img_qr_link_pil.resize((68, 68))
 
-  pos_qr_link_x = pos_qr_prog_x - img_qr_link_pil.width - 15
-  pos_qr_link_y = alto_total - img_qr_link_pil.height - 12
-  img_final.paste(img_qr_link_pil, (pos_qr_link_x, pos_qr_link_y), img_qr_link_pil)
+  pos_qr_x = ancho_total - padding_lateral - img_qr_pil.width - 10
+  pos_qr_y = alto_total - img_qr_pil.height - 15
+  img_final.paste(img_qr_pil, (pos_qr_x, pos_qr_y), img_qr_pil)
 
   ruta_fuente = os.path.join(IMG_FOLDER, "BURBANK.ttf")
   try:
@@ -624,9 +601,9 @@ if os.path.exists(IMG_FOLDER):
             on_change=make_toggle_var_dom(ids_var),
         )
 
-    # --- RESTAURAR PROGRESO POR TARJETA ---
+    # --- RESTAURAR PROGRESO POR TARJETA (BETA) ---
     str_lit.markdown("---")
-    str_lit.subheader("📱 Restaurar Progreso por Tarjeta")
+    str_lit.subheader("📱 Restaurar Progreso por Tarjeta (Beta)")
 
     tarjeta_subida = str_lit.file_uploader(
         "Escanear tarjeta y restablecer espiritus",
@@ -648,14 +625,14 @@ if os.path.exists(IMG_FOLDER):
           str_lit.session_state.dominados = set(dom_recuperados)
           str_lit.session_state.file_uploader_key += 1
           str_lit.session_state.mensaje_restauracion = (
-              f"Se ha leído correctamente al instante. ¡Progreso restaurado! "
+              f"Se ha leído correctamente. ¡Progreso restaurado! "
               f"({len(sel_recuperados)} obtenidos, {len(dom_recuperados)} dominados)"
           )
           str_lit.rerun()
         else:
           str_lit.session_state.mensaje_restauracion = None
           str_lit.error(
-              "No se pudo detectar el código QR de progreso en esta imagen."
+              "No se pudo detectar ningún código QR válido en esta imagen."
           )
 
     if str_lit.session_state.mensaje_restauracion:
@@ -668,7 +645,7 @@ if os.path.exists(IMG_FOLDER):
   str_lit.title("✨ Tracker de Espíritus - Fortnite")
   str_lit.markdown(
       "Lleva el control de tus espíritus obtenidos y dominados, y genera tu"
-      " tarjeta personalizada con códigos QR optimizados."
+      " tarjeta personalizada."
   )
 
   total_espiritus = len(todos_los_ids)
@@ -802,8 +779,8 @@ if os.path.exists(IMG_FOLDER):
     )
     str_lit.download_button(
         label=(
-            "📥 Crear y Descargar Tarjeta General (Incluye QR de Progreso "
-            "e Inteligencia para Linktree)"
+            "📥 Crear y Descargar Tarjeta General (Con mini QR de respaldo"
+            " integrado)"
         ),
         data=img_bytes,
         file_name="catalogo_espiritus.png",
@@ -910,7 +887,7 @@ if os.path.exists(IMG_FOLDER):
           str_lit.session_state.seleccionados,
           str_lit.session_state.dominados,
           archivos_ordenados,
-          titulo_personalizado=titulo_custom_input,
+        titulo_personalizado=titulo_custom_input,
           usar_fondo_app=False,
           imagen_custom=fondo_custom_usuario,
       )
