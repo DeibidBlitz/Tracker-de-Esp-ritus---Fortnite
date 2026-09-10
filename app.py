@@ -14,6 +14,7 @@ IMAGEN_FONDO_EXPORT_PATH = os.path.join(IMG_FOLDER, "fondo_catalogo.png")
 IMAGEN_FONDO_APP_PATH = os.path.join(IMG_FOLDER, "fondo_app.png")
 CHECK_ICON_PATH = os.path.join(IMG_FOLDER, "check_verde.png")
 CORONA_ICON_PATH = os.path.join(IMG_FOLDER, "corona.png")
+LINKTREE_URL = "https://linktr.ee/deibid_blitz"
 
 str_lit.set_page_config(
     page_title="Tracker de Espíritus", page_icon="✨", layout="wide"
@@ -104,6 +105,36 @@ def obtener_nombre_limpio(nombre_base):
     return categoria
   else:
     return f"{categoria} {variante}"
+
+
+def generar_qr_respaldo_bytes(seleccionados, dominados, lista_todos_archivos):
+  """Genera una imagen QR independiente que codifica el progreso de los espíritus."""
+  bin_sel = "".join(
+      "1" if os.path.splitext(f)[0] in seleccionados else "0"
+      for f in lista_todos_archivos
+  )
+  bin_dom = "".join(
+      "1" if os.path.splitext(f)[0] in dominados else "0"
+      for f in lista_todos_archivos
+  )
+
+  val_sel = int(bin_sel, 2) if bin_sel else 0
+  val_dom = int(bin_dom, 2) if bin_dom else 0
+  datos_qr = f"{val_sel:x},{val_dom:x}"
+
+  qr_gen = qrcode.QRCode(
+      version=1,
+      error_correction=qrcode.constants.ERROR_CORRECT_M,
+      box_size=10,
+      border=4,
+  )
+  qr_gen.add_data(datos_qr)
+  qr_gen.make(fit=True)
+  img_qr = qr_gen.make_image(fill_color="black", back_color="white").convert("RGB")
+
+  buf = io.BytesIO()
+  img_qr.save(buf, format="PNG")
+  return buf.getvalue()
 
 
 def leer_progreso_desde_imagen(imagen_bytes, lista_todos_archivos):
@@ -214,28 +245,14 @@ def generar_imagen_coleccion(
 
   img_final = Image.alpha_composite(img_final, capa_ui)
 
-  # --- CREAR QR ULTRA COMPRIMIDO (BITS A HEXADECIMAL) ---
-  bin_sel = "".join(
-      "1" if os.path.splitext(f)[0] in seleccionados else "0"
-      for f in todos_los_archivos_global
-  )
-  bin_dom = "".join(
-      "1" if os.path.splitext(f)[0] in dominados else "0"
-      for f in todos_los_archivos_global
-  )
-
-  val_sel = int(bin_sel, 2) if bin_sel else 0
-  val_dom = int(bin_dom, 2) if bin_dom else 0
-
-  datos_qr = f"{val_sel:x},{val_dom:x}"
-
+  # --- CREAR QR CON EL LINKTREE PARA LAS TARJETAS ---
   qr_gen = qrcode.QRCode(
       version=1,
       error_correction=qrcode.constants.ERROR_CORRECT_M,
       box_size=2,
       border=1,
   )
-  qr_gen.add_data(datos_qr)
+  qr_gen.add_data(LINKTREE_URL)
   qr_gen.make(fit=True)
   img_qr_pil = qr_gen.make_image(fill_color="black", back_color="white").convert(
       "RGBA"
@@ -601,12 +618,29 @@ if os.path.exists(IMG_FOLDER):
             on_change=make_toggle_var_dom(ids_var),
         )
 
-    # --- RESTAURAR PROGRESO POR TARJETA (BETA) ---
+    # --- QR DE RESPALDO Y RESTAURACIÓN ---
     str_lit.markdown("---")
-    str_lit.subheader("📱 Restaurar Progreso por Tarjeta (Beta)")
+    str_lit.subheader("💾 Respaldo de Progreso")
+    
+    # Botón para descargar el QR de respaldo específico del progreso
+    qr_bytes_respaldo = generar_qr_respaldo_bytes(
+        str_lit.session_state.seleccionados,
+        str_lit.session_state.dominados,
+        archivos_ordenados
+    )
+    str_lit.download_button(
+        label="📥 Descargar QR de Respaldo",
+        data=qr_bytes_respaldo,
+        file_name="qr_respaldo_espiritus.png",
+        mime="image/png",
+        help="Guarda esta imagen para restaurar tu progreso más adelante."
+    )
+
+    str_lit.markdown("")
+    str_lit.subheader("📱 Restaurar Progreso")
 
     tarjeta_subida = str_lit.file_uploader(
-        "Escanear tarjeta y restablecer espiritus",
+        "Sube tu QR de respaldo o tarjeta",
         type=["png", "jpg", "jpeg"],
         key=f"uploader_{str_lit.session_state.file_uploader_key}",
     )
@@ -632,7 +666,7 @@ if os.path.exists(IMG_FOLDER):
         else:
           str_lit.session_state.mensaje_restauracion = None
           str_lit.error(
-              "No se pudo detectar ningún código QR válido en esta imagen."
+              "No se pudo detectar ningún código QR válido de progreso en esta imagen."
           )
 
     if str_lit.session_state.mensaje_restauracion:
@@ -779,7 +813,7 @@ if os.path.exists(IMG_FOLDER):
     )
     str_lit.download_button(
         label=(
-            "📥 Crear y Descargar Tarjeta General (Con mini QR de respaldo"
+            "📥 Crear y Descargar Tarjeta General (Con QR de Linktree"
             " integrado)"
         ),
         data=img_bytes,
@@ -887,7 +921,7 @@ if os.path.exists(IMG_FOLDER):
           str_lit.session_state.seleccionados,
           str_lit.session_state.dominados,
           archivos_ordenados,
-        titulo_personalizado=titulo_custom_input,
+          titulo_personalizado=titulo_custom_input,
           usar_fondo_app=False,
           imagen_custom=fondo_custom_usuario,
       )
