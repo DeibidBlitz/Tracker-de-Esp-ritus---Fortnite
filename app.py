@@ -108,7 +108,6 @@ def obtener_nombre_limpio(nombre_base):
 
 
 def generar_qr_respaldo_bytes(seleccionados, dominados, lista_todos_archivos):
-  """Genera una imagen QR independiente que codifica el progreso de los espíritus."""
   bin_sel = "".join(
       "1" if os.path.splitext(f)[0] in seleccionados else "0"
       for f in lista_todos_archivos
@@ -138,7 +137,6 @@ def generar_qr_respaldo_bytes(seleccionados, dominados, lista_todos_archivos):
 
 
 def leer_progreso_desde_imagen(imagen_bytes, lista_todos_archivos):
-  """Decodifica el QR compacto basado en hexadecimal/bits."""
   try:
     np_arr = np.frombuffer(imagen_bytes, np.uint8)
     img_cv = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
@@ -245,7 +243,6 @@ def generar_imagen_coleccion(
 
   img_final = Image.alpha_composite(img_final, capa_ui)
 
-  # --- CREAR QR CON EL LINKTREE PARA LAS TARJETAS ---
   qr_gen = qrcode.QRCode(
       version=1,
       error_correction=qrcode.constants.ERROR_CORRECT_M,
@@ -618,11 +615,9 @@ if os.path.exists(IMG_FOLDER):
             on_change=make_toggle_var_dom(ids_var),
         )
 
-    # --- QR DE RESPALDO Y RESTAURACIÓN ---
     str_lit.markdown("---")
     str_lit.subheader("💾 Respaldo de Progreso")
     
-    # Botón para descargar el QR de respaldo específico del progreso
     qr_bytes_respaldo = generar_qr_respaldo_bytes(
         str_lit.session_state.seleccionados,
         str_lit.session_state.dominados,
@@ -823,6 +818,7 @@ if os.path.exists(IMG_FOLDER):
 
     str_lit.markdown("---")
     
+    # --- EXPANSOR DE TARJETAS POR CATEGORÍA ---
     with str_lit.expander("📁 Tarjetas por Categoría"):
       str_lit.markdown(
           "Despliega y genera únicamente la tarjeta de la categoría que"
@@ -857,6 +853,44 @@ if os.path.exists(IMG_FOLDER):
                     file_name=f"catalogo_{cat.lower().replace(' ', '_')}.png",
                     mime="image/png",
                     key=f"dl_cat_file_{cat}",
+                )
+            str_lit.markdown("---")
+
+    # --- NUEVO EXPANSOR DE TARJETAS POR VARIANTE ---
+    with str_lit.expander("🎨 Tarjetas por Variante"):
+      str_lit.markdown(
+          "Despliega y genera únicamente la tarjeta de la variante que"
+          " necesites (Ej. Normal, Dorado, Hacker, etc.):"
+      )
+      
+      for var in variantes_disponibles:
+        archivos_var = [
+            f for f in archivos_ordenados if obtener_variante(f) == var
+        ]
+        if archivos_var:
+          with str_lit.container():
+            col_info_v, col_btn_v = str_lit.columns([2, 1])
+            with col_info_v:
+              str_lit.markdown(f"**Variante: {var}** ({len(archivos_var)} espíritus)")
+            
+            with col_btn_v:
+              if str_lit.button(f"📥 Generar {var}", key=f"gen_btn_var_{var}"):
+                with str_lit.spinner(f"Generando tarjeta de {var}..."):
+                  img_var_bytes = generar_imagen_coleccion(
+                      archivos_var,
+                      str_lit.session_state.seleccionados,
+                      str_lit.session_state.dominados,
+                      archivos_ordenados,
+                      titulo_personalizado=f"VARIANTE: {var.upper()}",
+                      usar_fondo_app=False,
+                      imagen_custom=fondo_custom_usuario,
+                  )
+                str_lit.download_button(
+                    label=f"💾 Descargar {var}.png",
+                    data=img_var_bytes,
+                    file_name=f"catalogo_variante_{var.lower().replace(' ', '_')}.png",
+                    mime="image/png",
+                    key=f"dl_var_file_{var}",
                 )
             str_lit.markdown("---")
 
