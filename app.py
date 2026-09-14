@@ -685,7 +685,12 @@ if os.path.exists(IMG_FOLDER):
   with col_m1:
     str_lit.metric(label="Total Registrados", value=total_espiritus)
   with col_m2:
-    str_lit.metric(label="Obtenidos", value=obtenidos_count)
+    porcentaje_obtenidos = (
+        (obtenidos_count / total_espiritus) * 100 if total_espiritus > 0 else 0
+    )
+    str_lit.metric(
+        label=f"Obtenidos ({porcentaje_obtenidos:.1f}%)", value=obtenidos_count
+    )
   with col_m3:
     porcentaje_dominados = (
         (dominados_count / total_espiritus) * 100 if total_espiritus > 0 else 0
@@ -856,7 +861,7 @@ if os.path.exists(IMG_FOLDER):
                 )
             str_lit.markdown("---")
 
-    # --- NUEVO EXPANSOR DE TARJETAS POR VARIANTE ---
+    # --- EXPANSOR DE TARJETAS POR VARIANTE ---
     with str_lit.expander("🎨 Tarjetas por Variante"):
       str_lit.markdown(
           "Despliega y genera únicamente la tarjeta de la variante que"
