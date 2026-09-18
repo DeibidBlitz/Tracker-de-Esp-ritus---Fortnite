@@ -416,7 +416,7 @@ if os.path.exists(IMG_FOLDER):
       categorias_disponibles.append(cat)
 
   cat_to_ids = {}
-  variantes_disponibles = ["Normal", "Dorado", "Hacker", "Hacker de Botín"]
+  variantes_disponibles = ["Normal", "Dorado", "Hacker", "Hacker de Botín", "Cazarecompensas"]
   var_to_ids = {v: [] for v in variantes_disponibles}
 
   for f in archivos_crudos:
