@@ -87,7 +87,9 @@ def obtener_titulo_categoria(nombre_archivo):
 
 def obtener_variante(nombre_archivo):
   nombre_base = os.path.splitext(nombre_archivo)[0].lower()
-  if "dorado" in nombre_base:
+  if "cazarecompensas" in nombre_base:
+    return "Cazarecompensas"
+  elif "dorado" in nombre_base:
     return "Dorado"
   elif "hacker" in nombre_base and ("botin" in nombre_base or "botín" in nombre_base):
     return "Hacker de Botín"
