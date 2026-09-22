@@ -78,6 +78,10 @@ if not os.path.exists(IMG_FOLDER):
 
 
 # --- FUNCIONES AUXILIARES ---
+def es_proximo(nombre_archivo):
+  return "proximo" in nombre_archivo.lower() or "prox_" in nombre_archivo.lower()
+
+
 def obtener_titulo_categoria(nombre_archivo):
   partes = nombre_archivo.split("-")
   if len(partes) >= 2:
@@ -409,7 +413,11 @@ if os.path.exists(IMG_FOLDER):
       and f.lower() not in archivos_ignorar
   ])
   archivos_ordenados = list(archivos_crudos)
+  
+  # Listas filtradas para excluir los próximos de métricas y tarjetas exportadas
+  archivos_activos_tarjeta = [f for f in archivos_ordenados if not es_proximo(f)]
   todos_los_ids = [os.path.splitext(f)[0] for f in archivos_ordenados]
+  todos_los_ids_activos = [os.path.splitext(f)[0] for f in archivos_activos_tarjeta]
 
   categorias_disponibles = []
   for f in archivos_crudos:
@@ -451,23 +459,24 @@ if os.path.exists(IMG_FOLDER):
     str_lit.markdown("---")
 
     is_all_checked = all(
-        id_esp in str_lit.session_state.seleccionados for id_esp in todos_los_ids
+        id_esp in str_lit.session_state.seleccionados for id_esp in todos_los_ids_activos
     )
     is_all_dom = all(
-        id_esp in str_lit.session_state.dominados for id_esp in todos_los_ids
+        id_esp in str_lit.session_state.dominados for id_esp in todos_los_ids_activos
     )
 
 
     def toggle_global_chk():
       current_all = all(
           id_esp in str_lit.session_state.seleccionados
-          for id_esp in todos_los_ids
+          for id_esp in todos_los_ids_activos
       )
       if current_all:
-        str_lit.session_state.seleccionados.clear()
-        str_lit.session_state.dominados.clear()
+        for id_esp in todos_los_ids_activos:
+          str_lit.session_state.seleccionados.discard(id_esp)
+          str_lit.session_state.dominados.discard(id_esp)
       else:
-        for id_esp in todos_los_ids:
+        for id_esp in todos_los_ids_activos:
           str_lit.session_state.seleccionados.add(id_esp)
 
 
@@ -481,12 +490,13 @@ if os.path.exists(IMG_FOLDER):
 
     def toggle_global_dom():
       current_all = all(
-          id_esp in str_lit.session_state.dominados for id_esp in todos_los_ids
+          id_esp in str_lit.session_state.dominados for id_esp in todos_los_ids_activos
       )
       if current_all:
-        str_lit.session_state.dominados.clear()
+        for id_esp in todos_los_ids_activos:
+          str_lit.session_state.dominados.discard(id_esp)
       else:
-        for id_esp in todos_los_ids:
+        for id_esp in todos_los_ids_activos:
           str_lit.session_state.seleccionados.add(id_esp)
           str_lit.session_state.dominados.add(id_esp)
 
@@ -501,7 +511,9 @@ if os.path.exists(IMG_FOLDER):
 
     with str_lit.expander("📌 Marcar por categoría"):
       for cat in categorias_disponibles:
-        ids_cat = cat_to_ids[cat]
+        ids_cat = [i for i in cat_to_ids[cat] if not es_proximo(i + ".png")]
+        if not ids_cat:
+          continue
         cat_checked_all = all(
             id_esp in str_lit.session_state.seleccionados for id_esp in ids_cat
         )
@@ -530,7 +542,9 @@ if os.path.exists(IMG_FOLDER):
 
     with str_lit.expander("👑 Dominar por categoría"):
       for cat in categorias_disponibles:
-        ids_cat = cat_to_ids[cat]
+        ids_cat = [i for i in cat_to_ids[cat] if not es_proximo(i + ".png")]
+        if not ids_cat:
+          continue
         cat_dom_all = all(
             id_esp in str_lit.session_state.dominados for id_esp in ids_cat
         )
@@ -559,7 +573,7 @@ if os.path.exists(IMG_FOLDER):
 
     with str_lit.expander("📌 Marcar por variante"):
       for var in variantes_disponibles:
-        ids_var = var_to_ids[var]
+        ids_var = [i for i in var_to_ids[var] if not es_proximo(i + ".png")]
         if not ids_var:
           continue
         var_checked_all = all(
@@ -590,7 +604,7 @@ if os.path.exists(IMG_FOLDER):
 
     with str_lit.expander("👑 Dominar por variante"):
       for var in variantes_disponibles:
-        ids_var = var_to_ids[var]
+        ids_var = [i for i in var_to_ids[var] if not es_proximo(i + ".png")]
         if not ids_var:
           continue
         var_dom_all = all(
@@ -623,7 +637,7 @@ if os.path.exists(IMG_FOLDER):
     qr_bytes_respaldo = generar_qr_respaldo_bytes(
         str_lit.session_state.seleccionados,
         str_lit.session_state.dominados,
-        archivos_ordenados
+        archivos_activos_tarjeta
     )
     str_lit.download_button(
         label="📥 Descargar QR de Respaldo",
@@ -648,7 +662,7 @@ if os.path.exists(IMG_FOLDER):
         str_lit.session_state.ultimo_bytes_leidos = bytes_actuales
 
         sel_recuperados, dom_recuperados = leer_progreso_desde_imagen(
-            bytes_actuales, archivos_ordenados
+            bytes_actuales, archivos_activos_tarjeta
         )
 
         if sel_recuperados is not None:
@@ -679,7 +693,7 @@ if os.path.exists(IMG_FOLDER):
       " tarjeta personalizada."
   )
 
-  total_espiritus = len(todos_los_ids)
+  total_espiritus = len(todos_los_ids_activos)
   obtenidos_count = len(str_lit.session_state.seleccionados)
   dominados_count = len(str_lit.session_state.dominados)
 
@@ -747,53 +761,67 @@ if os.path.exists(IMG_FOLDER):
     for i, archivo in enumerate(grupo_filtrado):
       nombre_base = os.path.splitext(archivo)[0]
       nombre_mostrado = obtener_nombre_limpio(nombre_base)
+      proximo_lanzamiento = es_proximo(archivo)
 
       with cols[i % 5]:
-        str_lit.image(f"{IMG_FOLDER}/{archivo}", width=100)
-        str_lit.markdown(
-            f"<div style='text-align: center; font-weight: bold; font-size:"
-            f" 13px; margin-bottom: 5px;'>{nombre_mostrado}</div>",
-            unsafe_allow_html=True,
-        )
+        if proximo_lanzamiento:
+          # Vista semitransparente y SIN cuadritos de selección ni botones
+          str_lit.markdown(
+              f"""
+              <div style='text-align: center; opacity: 0.35; margin-bottom: 10px;'>
+                  <img src='app/static/{IMG_FOLDER}/{archivo}' width='100' style='border-radius: 8px;'>
+                  <div style='font-weight: bold; font-size: 13px; color: white;'>{nombre_mostrado}</div>
+                  <div style='font-size: 11px; color: #aaa; margin-top: 2px;'>🔒 Próximamente</div>
+              </div>
+              """,
+              unsafe_allow_html=True,
+          )
+        else:
+          str_lit.image(f"{IMG_FOLDER}/{archivo}", width=100)
+          str_lit.markdown(
+              f"<div style='text-align: center; font-weight: bold; font-size:"
+              f" 13px; margin-bottom: 5px;'>{nombre_mostrado}</div>",
+              unsafe_allow_html=True,
+          )
 
-        is_checked = nombre_base in str_lit.session_state.seleccionados
-        is_dom = nombre_base in str_lit.session_state.dominados
+          is_checked = nombre_base in str_lit.session_state.seleccionados
+          is_dom = nombre_base in str_lit.session_state.dominados
 
-        c_btn1, c_btn2 = str_lit.columns(2)
+          c_btn1, c_btn2 = str_lit.columns(2)
 
-        with c_btn1:
-          etiqueta_chk = "✅" if is_checked else "⬜"
-          if str_lit.button(
-              etiqueta_chk, key=f"chk_{nombre_base}", use_container_width=True
-          ):
-            str_lit.session_state.mensaje_restauracion = None
-            if is_checked:
-              str_lit.session_state.seleccionados.remove(nombre_base)
-              if nombre_base in str_lit.session_state.dominados:
-                str_lit.session_state.dominados.remove(nombre_base)
-            else:
-              str_lit.session_state.seleccionados.add(nombre_base)
-            str_lit.rerun()
-
-        with c_btn2:
-          etiqueta_dom = "👑" if is_dom else "⬚"
-          if is_checked:
+          with c_btn1:
+            etiqueta_chk = "✅" if is_checked else "⬜"
             if str_lit.button(
-                etiqueta_dom, key=f"dom_{nombre_base}", use_container_width=True
+                etiqueta_chk, key=f"chk_{nombre_base}", use_container_width=True
             ):
               str_lit.session_state.mensaje_restauracion = None
-              if is_dom:
-                str_lit.session_state.dominados.remove(nombre_base)
+              if is_checked:
+                str_lit.session_state.seleccionados.remove(nombre_base)
+                if nombre_base in str_lit.session_state.dominados:
+                  str_lit.session_state.dominados.remove(nombre_base)
               else:
-                str_lit.session_state.dominados.add(nombre_base)
+                str_lit.session_state.seleccionados.add(nombre_base)
               str_lit.rerun()
-          else:
-            str_lit.button(
-                "🔒",
-                key=f"dom_{nombre_base}",
-                disabled=True,
-                use_container_width=True,
-            )
+
+          with c_btn2:
+            etiqueta_dom = "👑" if is_dom else "⬚"
+            if is_checked:
+              if str_lit.button(
+                  etiqueta_dom, key=f"dom_{nombre_base}", use_container_width=True
+              ):
+                str_lit.session_state.mensaje_restauracion = None
+                if is_dom:
+                  str_lit.session_state.dominados.remove(nombre_base)
+                else:
+                  str_lit.session_state.dominados.add(nombre_base)
+                str_lit.rerun()
+            else:
+              str_lit.button(
+                  "🔒",
+                  key=f"dom_{nombre_base}",
+                  disabled=True,
+                  use_container_width=True,
+              )
 
   str_lit.markdown("---")
   str_lit.subheader("🖼️ Generar Tarjetas de Colección")
@@ -806,10 +834,10 @@ if os.path.exists(IMG_FOLDER):
 
   if archivos_ordenados:
     img_bytes = generar_imagen_coleccion(
-        archivos_ordenados,
+        archivos_activos_tarjeta,
         str_lit.session_state.seleccionados,
         str_lit.session_state.dominados,
-        archivos_ordenados,
+        archivos_activos_tarjeta,
         usar_fondo_app=False,
         imagen_custom=fondo_custom_usuario,
     )
@@ -825,7 +853,7 @@ if os.path.exists(IMG_FOLDER):
 
     str_lit.markdown("---")
     
-    # --- EXPANSOR DE TARJETAS POR CATEGORÍA ---
+   # --- EXPANSOR DE TARJETAS POR CATEGORÍA ---
     with str_lit.expander("📁 Tarjetas por Categoría"):
       str_lit.markdown(
           "Despliega y genera únicamente la tarjeta de la categoría que"
@@ -834,7 +862,7 @@ if os.path.exists(IMG_FOLDER):
       
       for cat in categorias_disponibles:
         archivos_cat = [
-            f for f in archivos_ordenados if obtener_titulo_categoria(f) == cat
+            f for f in archivos_activos_tarjeta if obtener_titulo_categoria(f) == cat
         ]
         if archivos_cat:
           with str_lit.container():
@@ -849,7 +877,7 @@ if os.path.exists(IMG_FOLDER):
                       archivos_cat,
                       str_lit.session_state.seleccionados,
                       str_lit.session_state.dominados,
-                      archivos_ordenados,
+                      archivos_activos_tarjeta,
                       titulo_personalizado=f"CATEGORÍA: {cat.upper()}",
                       usar_fondo_app=False,
                       imagen_custom=fondo_custom_usuario,
@@ -861,7 +889,7 @@ if os.path.exists(IMG_FOLDER):
                     mime="image/png",
                     key=f"dl_cat_file_{cat}",
                 )
-            str_lit.markdown("---")
+          str_lit.markdown("---")
 
     # --- EXPANSOR DE TARJETAS POR VARIANTE ---
     with str_lit.expander("🎨 Tarjetas por Variante"):
@@ -872,7 +900,7 @@ if os.path.exists(IMG_FOLDER):
       
       for var in variantes_disponibles:
         archivos_var = [
-            f for f in archivos_ordenados if obtener_variante(f) == var
+            f for f in archivos_activos_tarjeta if obtener_variante(f) == var
         ]
         if archivos_var:
           with str_lit.container():
@@ -887,7 +915,7 @@ if os.path.exists(IMG_FOLDER):
                       archivos_var,
                       str_lit.session_state.seleccionados,
                       str_lit.session_state.dominados,
-                      archivos_ordenados,
+                      archivos_activos_tarjeta,
                       titulo_personalizado=f"VARIANTE: {var.upper()}",
                       usar_fondo_app=False,
                       imagen_custom=fondo_custom_usuario,
@@ -915,7 +943,7 @@ if os.path.exists(IMG_FOLDER):
       c_sel_all, c_des_all = str_lit.columns(2)
       with c_sel_all:
         if str_lit.button("Seleccionar Todos para Personalizada"):
-          for f in archivos_ordenados:
+          for f in archivos_activos_tarjeta:
             str_lit.session_state.custom_tarjeta_ids.add(
                 os.path.splitext(f)[0]
             )
@@ -928,7 +956,7 @@ if os.path.exists(IMG_FOLDER):
       str_lit.markdown("")
 
       cols_custom = str_lit.columns(4)
-      for idx, archivo in enumerate(archivos_ordenados):
+      for idx, archivo in enumerate(archivos_activos_tarjeta):
         f_id = os.path.splitext(archivo)[0]
         nombre_limpio = obtener_nombre_limpio(f_id)
         variante = obtener_variante(archivo)
@@ -948,7 +976,7 @@ if os.path.exists(IMG_FOLDER):
 
     archivos_custom_finales = [
         f
-        for f in archivos_ordenados
+        for f in archivos_activos_tarjeta
         if os.path.splitext(f)[0] in str_lit.session_state.custom_tarjeta_ids
     ]
     titulo_custom_input = str_lit.text_input(
@@ -961,7 +989,7 @@ if os.path.exists(IMG_FOLDER):
           archivos_custom_finales,
           str_lit.session_state.seleccionados,
           str_lit.session_state.dominados,
-          archivos_ordenados,
+          archivos_activos_tarjeta,
           titulo_personalizado=titulo_custom_input,
           usar_fondo_app=False,
           imagen_custom=fondo_custom_usuario,
