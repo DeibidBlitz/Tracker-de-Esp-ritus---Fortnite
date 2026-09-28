@@ -414,7 +414,6 @@ if os.path.exists(IMG_FOLDER):
   ])
   archivos_ordenados = list(archivos_crudos)
   
-  # Listas filtradas para excluir los próximos de métricas y tarjetas exportadas
   archivos_activos_tarjeta = [f for f in archivos_ordenados if not es_proximo(f)]
   todos_los_ids = [os.path.splitext(f)[0] for f in archivos_ordenados]
   todos_los_ids_activos = [os.path.splitext(f)[0] for f in archivos_activos_tarjeta]
@@ -765,7 +764,6 @@ if os.path.exists(IMG_FOLDER):
 
       with cols[i % 5]:
         if proximo_lanzamiento:
-          # Vista semitransparente y SIN cuadritos de selección ni botones
           str_lit.markdown(
               f"""
               <div style='text-align: center; opacity: 0.35; margin-bottom: 10px;'>
@@ -790,9 +788,9 @@ if os.path.exists(IMG_FOLDER):
           c_btn1, c_btn2 = str_lit.columns(2)
 
           with c_btn1:
-            etiqueta_chk = "✅" if is_checked else "⬜"
+            etiqueta_chk = "✅" if is_checked else "🟩"
             if str_lit.button(
-                etiqueta_chk, key=f"chk_{nombre_base}", use_container_width=True
+                etiqueta_chk, key=f"chk_{nombre_base}", use_container_width=True, help="Marcar como obtenido"
             ):
               str_lit.session_state.mensaje_restauracion = None
               if is_checked:
@@ -804,10 +802,10 @@ if os.path.exists(IMG_FOLDER):
               str_lit.rerun()
 
           with c_btn2:
-            etiqueta_dom = "👑" if is_dom else "⬚"
+            etiqueta_dom = "👑" if is_dom else "⭐"
             if is_checked:
               if str_lit.button(
-                  etiqueta_dom, key=f"dom_{nombre_base}", use_container_width=True
+                  etiqueta_dom, key=f"dom_{nombre_base}", use_container_width=True, help="Marcar como dominado"
               ):
                 str_lit.session_state.mensaje_restauracion = None
                 if is_dom:
@@ -821,6 +819,7 @@ if os.path.exists(IMG_FOLDER):
                   key=f"dom_{nombre_base}",
                   disabled=True,
                   use_container_width=True,
+                  help="Primero debes marcarlo como obtenido"
               )
 
   str_lit.markdown("---")
@@ -853,7 +852,7 @@ if os.path.exists(IMG_FOLDER):
 
     str_lit.markdown("---")
     
-   # --- EXPANSOR DE TARJETAS POR CATEGORÍA ---
+    # --- EXPANSOR DE TARJETAS POR CATEGORÍA ---
     with str_lit.expander("📁 Tarjetas por Categoría"):
       str_lit.markdown(
           "Despliega y genera únicamente la tarjeta de la categoría que"
@@ -955,19 +954,25 @@ if os.path.exists(IMG_FOLDER):
 
       str_lit.markdown("")
 
-      cols_custom = str_lit.columns(4)
+      # Modificado a 5 columnas con miniatura visual
+      cols_custom = str_lit.columns(5)
       for idx, archivo in enumerate(archivos_activos_tarjeta):
         f_id = os.path.splitext(archivo)[0]
         nombre_limpio = obtener_nombre_limpio(f_id)
-        variante = obtener_variante(archivo)
-        etiqueta_checkbox = f"{nombre_limpio} ({variante})"
         is_selected_custom = f_id in str_lit.session_state.custom_tarjeta_ids
 
-        with cols_custom[idx % 4]:
+        with cols_custom[idx % 5]:
+          str_lit.image(f"{IMG_FOLDER}/{archivo}", width=65)
+          str_lit.markdown(
+              f"<div style='font-size: 11px; font-weight: bold; margin-bottom: 2px; height: 32px; overflow: hidden;'>{nombre_limpio}</div>",
+              unsafe_allow_html=True,
+          )
+          
           checkbox_val = str_lit.checkbox(
-              etiqueta_checkbox,
+              "Incluir",
               value=is_selected_custom,
               key=f"custom_box_{f_id}",
+              label_visibility="collapsed"
           )
           if checkbox_val:
             str_lit.session_state.custom_tarjeta_ids.add(f_id)
