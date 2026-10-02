@@ -20,7 +20,7 @@ str_lit.set_page_config(
     page_title="Tracker de Espíritus", page_icon="✨", layout="wide"
 )
 
-# --- ESTILOS CSS Y FONDO DE LA APP ---
+# --- ESTILOS CSS Y FONDO DE LA APP (BOTONES EN NARANJA) ---
 if os.path.exists(IMAGEN_FONDO_APP_PATH):
   import base64
 
@@ -41,14 +41,32 @@ if os.path.exists(IMAGEN_FONDO_APP_PATH):
         max-width: 300px;
     }}
     div.stCheckbox {{
-        background-color: rgba(20, 20, 30, 0.6);
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        background-color: rgba(30, 20, 10, 0.6);
+        border: 1px solid rgba(255, 140, 0, 0.3);
         padding: 5px 10px;
         border-radius: 8px;
         margin-bottom: 5px;
     }}
     div.stCheckbox:hover {{
-        border-color: rgba(255, 255, 255, 0.5);
+        border-color: rgba(255, 140, 0, 0.8);
+    }}
+    /* Forzar color naranja brillante en los botones de Streamlit */
+    div.stButton > button {{
+        background: linear-gradient(135deg, #ff8c00 0%, #ff6600 100%) !important;
+        color: white !important;
+        border: 1px solid #ffa500 !important;
+        border-radius: 6px !important;
+        font-weight: bold !important;
+    }}
+    div.stButton > button:hover {{
+        background: linear-gradient(135deg, #ffa500 0%, #ff7f00 100%) !important;
+        border-color: #ffb732 !important;
+        color: white !important;
+    }}
+    div.stButton > button:disabled {{
+        background: rgba(50, 50, 50, 0.5) !important;
+        border-color: rgba(100, 100, 100, 0.3) !important;
+        color: #888 !important;
     }}
     </style>
     """
@@ -221,10 +239,11 @@ def generar_imagen_coleccion(
   capa_ui = Image.new("RGBA", (ancho_total, alto_total), (0, 0, 0, 0))
   d_ui = ImageDraw.Draw(capa_ui)
 
+  # Cabecera superior con borde verde original restaurado
   d_ui.rectangle(
       [padding_lateral, 15, ancho_total - padding_lateral, 75],
-      fill=(15, 60, 25, 230),
-      outline=(50, 200, 80, 255),
+      fill=(10, 40, 15, 230),
+      outline=(0, 255, 100, 255),
       width=2,
   )
 
@@ -242,10 +261,11 @@ def generar_imagen_coleccion(
           width=2,
       )
     else:
+      # Bordes de celdas en verde original restaurado
       d_ui.rectangle(
           [x - 5, y - 5, x + 75, y + 100],
-          fill=(10, 30, 15, 160),
-          outline=(60, 210, 90, 220),
+          fill=(10, 30, 10, 160),
+          outline=(0, 200, 80, 220),
           width=2,
       )
 
@@ -324,7 +344,7 @@ def generar_imagen_coleccion(
     img_final.paste(img_check_mini, (current_x, pos_y_iconos), img_check_mini)
     current_x += 26
   else:
-    d.text((current_x, pos_y_texto), "✓", fill=(0, 255, 120), font=font_contador)
+    d.text((current_x, pos_y_texto), "✓", fill=(0, 255, 100), font=font_contador)
     current_x += 20
 
   d.text(
@@ -387,12 +407,12 @@ def generar_imagen_coleccion(
         d.text((x + 24, y + 75), "👑", fill=(255, 215, 0))
     elif is_checked:
       d.rectangle(
-          [x + 22, y + 75, x + 48, y + 95], outline=(120, 120, 120), width=1
+          [x + 22, y + 75, x + 48, y + 95], outline=(0, 255, 100), width=1
       )
       if img_check:
         img_final.paste(img_check, (x + 22, y + 73), img_check)
       else:
-        d.text((x + 28, y + 76), "✓", fill=(0, 255, 120))
+        d.text((x + 28, y + 76), "✓", fill=(0, 255, 100))
 
   buf = io.BytesIO()
   img_final.save(buf, format="PNG")
@@ -790,7 +810,7 @@ if os.path.exists(IMG_FOLDER):
           c_btn1, c_btn2 = str_lit.columns(2)
 
           with c_btn1:
-            etiqueta_chk = "✅" if is_checked else "🟩"
+            etiqueta_chk = "Obtenido ✅" if is_checked else "Obtener ⬜"
             if str_lit.button(
                 etiqueta_chk, key=f"chk_{nombre_base}", use_container_width=True, help="Marcar como obtenido"
             ):
@@ -804,7 +824,7 @@ if os.path.exists(IMG_FOLDER):
               str_lit.rerun()
 
           with c_btn2:
-            etiqueta_dom = "👑" if is_dom else "⭐"
+            etiqueta_dom = "Dominado 👑" if is_dom else "Dominar ⭐"
             if is_checked:
               if str_lit.button(
                   etiqueta_dom, key=f"dom_{nombre_base}", use_container_width=True, help="Marcar como dominado"
@@ -817,7 +837,7 @@ if os.path.exists(IMG_FOLDER):
                 str_lit.rerun()
             else:
               str_lit.button(
-                  "🔒",
+                  "Bloqueado 🔒",
                   key=f"dom_{nombre_base}",
                   disabled=True,
                   use_container_width=True,
@@ -896,7 +916,7 @@ if os.path.exists(IMG_FOLDER):
     with str_lit.expander("🎨 Tarjetas por Variante"):
       str_lit.markdown(
           "Despliega y genera únicamente la tarjeta de la variante que"
-          " necesites (Ej. Normal, Dorado, Hacker, etc.):"
+          " necesites (Ej. Normal, Dorado, Hacker, Dulce o Truco, etc.):"
       )
       
       for var in variantes_disponibles:
@@ -956,7 +976,6 @@ if os.path.exists(IMG_FOLDER):
 
       str_lit.markdown("")
 
-      # Modificado a 5 columnas con miniatura visual
       cols_custom = str_lit.columns(5)
       for idx, archivo in enumerate(archivos_activos_tarjeta):
         f_id = os.path.splitext(archivo)[0]
