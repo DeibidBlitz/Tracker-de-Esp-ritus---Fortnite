@@ -50,7 +50,6 @@ if os.path.exists(IMAGEN_FONDO_APP_PATH):
     div.stCheckbox:hover {{
         border-color: rgba(255, 140, 0, 0.8);
     }}
-    /* Forzar color naranja brillante en los botones de Streamlit */
     div.stButton > button {{
         background: linear-gradient(135deg, #ff8c00 0%, #ff6600 100%) !important;
         color: white !important;
@@ -239,7 +238,6 @@ def generar_imagen_coleccion(
   capa_ui = Image.new("RGBA", (ancho_total, alto_total), (0, 0, 0, 0))
   d_ui = ImageDraw.Draw(capa_ui)
 
-  # Cabecera superior con borde verde original restaurado
   d_ui.rectangle(
       [padding_lateral, 15, ancho_total - padding_lateral, 75],
       fill=(10, 40, 15, 230),
@@ -261,7 +259,6 @@ def generar_imagen_coleccion(
           width=2,
       )
     else:
-      # Bordes de celdas en verde original restaurado
       d_ui.rectangle(
           [x - 5, y - 5, x + 75, y + 100],
           fill=(10, 30, 10, 160),
@@ -952,53 +949,66 @@ if os.path.exists(IMG_FOLDER):
 
     str_lit.markdown("#### ✨ Crear Tarjeta Personalizada (Múltiples Espíritus)")
 
+    # --- MENÚS PLEGABLES PARA SELECCIONAR POR CATEGORÍA Y VARIANTE EN TARJETA A MEDIDA ---
     with str_lit.expander(
-        "🛠️ Seleccionar espíritus para tarjeta a medida (Haz clic"
-        " aquí)"
+        "🛠️️ Seleccionar espíritus para tarjeta a medida (Por Categoría y Variante)"
     ):
       str_lit.markdown(
-          "Marca las casillas de los espíritus que deseas incluir juntos en"
-          " tu tarjeta personalizada:"
+          "Selecciona categorías o variantes completas para armar tu tarjeta personalizada de forma rápida:"
       )
 
-      c_sel_all, c_des_all = str_lit.columns(2)
-      with c_sel_all:
-        if str_lit.button("Seleccionar Todos para Personalizada"):
-          for f in archivos_activos_tarjeta:
-            str_lit.session_state.custom_tarjeta_ids.add(
-                os.path.splitext(f)[0]
-            )
-          str_lit.rerun()
-      with c_des_all:
-        if str_lit.button("Deseleccionar Todos"):
-          str_lit.session_state.custom_tarjeta_ids.clear()
-          str_lit.rerun()
+      str_lit.markdown("### 📁 Seleccionar por Categoría")
+      for cat in categorias_disponibles:
+        ids_cat = [os.path.splitext(i)[0] for i in archivos_activos_tarjeta if obtener_titulo_categoria(i) == cat]
+        if not ids_cat:
+          continue
+        
+        cat_all_custom = all(i in str_lit.session_state.custom_tarjeta_ids for i in ids_cat)
 
-      str_lit.markdown("")
+        def make_toggle_custom_cat(c_ids):
+          def callback():
+            curr_all = all(i in str_lit.session_state.custom_tarjeta_ids for i in c_ids)
+            if curr_all:
+              for i in c_ids:
+                str_lit.session_state.custom_tarjeta_ids.discard(i)
+            else:
+              for i in c_ids:
+                str_lit.session_state.custom_tarjeta_ids.add(i)
+          return callback
 
-      cols_custom = str_lit.columns(5)
-      for idx, archivo in enumerate(archivos_activos_tarjeta):
-        f_id = os.path.splitext(archivo)[0]
-        nombre_limpio = obtener_nombre_limpio(f_id)
-        is_selected_custom = f_id in str_lit.session_state.custom_tarjeta_ids
+        str_lit.checkbox(
+            f"Categoría: {cat} ({len(ids_cat)} espíritus)",
+            value=cat_all_custom,
+            key=f"custom_cat_{cat}",
+            on_change=make_toggle_custom_cat(ids_cat)
+        )
 
-        with cols_custom[idx % 5]:
-          str_lit.image(f"{IMG_FOLDER}/{archivo}", width=65)
-          str_lit.markdown(
-              f"<div style='font-size: 11px; font-weight: bold; margin-bottom: 2px; height: 32px; overflow: hidden;'>{nombre_limpio}</div>",
-              unsafe_allow_html=True,
-          )
-          
-          checkbox_val = str_lit.checkbox(
-              "Incluir",
-              value=is_selected_custom,
-              key=f"custom_box_{f_id}",
-              label_visibility="collapsed"
-          )
-          if checkbox_val:
-            str_lit.session_state.custom_tarjeta_ids.add(f_id)
-          else:
-            str_lit.session_state.custom_tarjeta_ids.discard(f_id)
+      str_lit.markdown("---")
+      str_lit.markdown("### 🎨 Seleccionar por Variante")
+      for var in variantes_disponibles:
+        ids_var = [os.path.splitext(i)[0] for i in archivos_activos_tarjeta if obtener_variante(i) == var]
+        if not ids_var:
+          continue
+        
+        var_all_custom = all(i in str_lit.session_state.custom_tarjeta_ids for i in ids_var)
+
+        def make_toggle_custom_var(v_ids):
+          def callback():
+            curr_all = all(i in str_lit.session_state.custom_tarjeta_ids for i in v_ids)
+            if curr_all:
+              for i in v_ids:
+                str_lit.session_state.custom_tarjeta_ids.discard(i)
+            else:
+              for i in v_ids:
+                str_lit.session_state.custom_tarjeta_ids.add(i)
+          return callback
+
+        str_lit.checkbox(
+            f"Variante: {var} ({len(ids_var)} espíritus)",
+            value=var_all_custom,
+            key=f"custom_var_{var}",
+            on_change=make_toggle_custom_var(ids_var)
+        )
 
     archivos_custom_finales = [
         f
@@ -1031,7 +1041,7 @@ if os.path.exists(IMG_FOLDER):
       )
     else:
       str_lit.info(
-          "Selecciona al menos un espíritu en el menú desplegable de arriba"
+          "Selecciona al menos una categoría o variante en el menú de arriba"
           " para generar tu tarjeta personalizada."
       )
   else:
