@@ -201,6 +201,7 @@ def generar_imagen_coleccion(
     titulo_personalizado=None,
     usar_fondo_app=False,
     imagen_custom=None,
+    mostrar_marcas=True,
 ):
   if not lista_ordenada_archivos:
     img_vacia = Image.new("RGBA", (400, 150), color=(20, 20, 20, 255))
@@ -249,7 +250,7 @@ def generar_imagen_coleccion(
     x = padding_lateral + (i % columnas) * ancho_celda + 10
     y = padding_superior + (i // columnas) * alto_celda + 10
     nombre_base = os.path.splitext(lista_ordenada_archivos[i])[0]
-    is_dom = nombre_base in dominados
+    is_dom = nombre_base in dominados if mostrar_marcas else False
 
     if is_dom:
       d_ui.rectangle(
@@ -312,62 +313,64 @@ def generar_imagen_coleccion(
   )
 
   total_items = len(lista_ordenada_archivos)
-  obtenidos_totales = sum(
-      1
-      for f in lista_ordenada_archivos
-      if os.path.splitext(f)[0] in seleccionados
-  )
-  dominados_totales = sum(
-      1 for f in lista_ordenada_archivos if os.path.splitext(f)[0] in dominados
-  )
-
-  pos_x_base = ancho_total - padding_lateral - 215
-  pos_y_iconos = 32
-  pos_y_texto = 33
-
-  img_check_mini = (
-      Image.open(CHECK_ICON_PATH).convert("RGBA").resize((22, 22))
-      if os.path.exists(CHECK_ICON_PATH)
-      else None
-  )
-  img_corona_mini = (
-      Image.open(CORONA_ICON_PATH).convert("RGBA").resize((24, 24))
-      if os.path.exists(CORONA_ICON_PATH)
-      else None
-  )
-
-  current_x = pos_x_base
-  if img_check_mini:
-    img_final.paste(img_check_mini, (current_x, pos_y_iconos), img_check_mini)
-    current_x += 26
-  else:
-    d.text((current_x, pos_y_texto), "✓", fill=(0, 255, 100), font=font_contador)
-    current_x += 20
-
-  d.text(
-      (current_x, pos_y_texto),
-      f"{obtenidos_totales}/{total_items}",
-      fill=(255, 255, 255),
-      font=font_contador,
-  )
-  current_x += 90
-  if img_corona_mini:
-    img_final.paste(
-        img_corona_mini, (current_x, pos_y_iconos - 2), img_corona_mini
+  
+  if mostrar_marcas:
+    obtenidos_totales = sum(
+        1
+        for f in lista_ordenada_archivos
+        if os.path.splitext(f)[0] in seleccionados
     )
-    current_x += 28
-  else:
+    dominados_totales = sum(
+        1 for f in lista_ordenada_archivos if os.path.splitext(f)[0] in dominados
+    )
+
+    pos_x_base = ancho_total - padding_lateral - 215
+    pos_y_iconos = 32
+    pos_y_texto = 33
+
+    img_check_mini = (
+        Image.open(CHECK_ICON_PATH).convert("RGBA").resize((22, 22))
+        if os.path.exists(CHECK_ICON_PATH)
+        else None
+    )
+    img_corona_mini = (
+        Image.open(CORONA_ICON_PATH).convert("RGBA").resize((24, 24))
+        if os.path.exists(CORONA_ICON_PATH)
+        else None
+    )
+
+    current_x = pos_x_base
+    if img_check_mini:
+      img_final.paste(img_check_mini, (current_x, pos_y_iconos), img_check_mini)
+      current_x += 26
+    else:
+      d.text((current_x, pos_y_texto), "✓", fill=(0, 255, 100), font=font_contador)
+      current_x += 20
+
     d.text(
-        (current_x, pos_y_texto), "👑", fill=(255, 215, 0), font=font_contador
+        (current_x, pos_y_texto),
+        f"{obtenidos_totales}/{total_items}",
+        fill=(255, 255, 255),
+        font=font_contador,
     )
-    current_x += 25
+    current_x += 90
+    if img_corona_mini:
+      img_final.paste(
+          img_corona_mini, (current_x, pos_y_iconos - 2), img_corona_mini
+      )
+      current_x += 28
+    else:
+      d.text(
+          (current_x, pos_y_texto), "👑", fill=(255, 215, 0), font=font_contador
+      )
+      current_x += 25
 
-  d.text(
-      (current_x, pos_y_texto),
-      f"{dominados_totales}/{total_items}",
-      fill=(255, 255, 255),
-      font=font_contador,
-  )
+    d.text(
+        (current_x, pos_y_texto),
+        f"{dominados_totales}/{total_items}",
+        fill=(255, 255, 255),
+        font=font_contador,
+    )
 
   img_check = (
       Image.open(CHECK_ICON_PATH).convert("RGBA").resize((26, 26))
@@ -387,29 +390,30 @@ def generar_imagen_coleccion(
     y = padding_superior + (i // columnas) * alto_celda + 10
     img_final.paste(img_espiritu, (x, y), img_espiritu)
 
-    nombre_base = os.path.splitext(archivo)[0]
-    is_checked = nombre_base in seleccionados
-    is_dom = nombre_base in dominados
+    if mostrar_marcas:
+      nombre_base = os.path.splitext(archivo)[0]
+      is_checked = nombre_base in seleccionados
+      is_dom = nombre_base in dominados
 
-    if is_dom:
-      d.rectangle(
-          [x + 20, y + 73, x + 50, y + 97],
-          fill=(50, 40, 0, 220),
-          outline=(255, 215, 0),
-          width=2,
-      )
-      if img_corona:
-        img_final.paste(img_corona, (x + 19, y + 70), img_corona)
-      else:
-        d.text((x + 24, y + 75), "👑", fill=(255, 215, 0))
-    elif is_checked:
-      d.rectangle(
-          [x + 22, y + 75, x + 48, y + 95], outline=(0, 255, 100), width=1
-      )
-      if img_check:
-        img_final.paste(img_check, (x + 22, y + 73), img_check)
-      else:
-        d.text((x + 28, y + 76), "✓", fill=(0, 255, 100))
+      if is_dom:
+        d.rectangle(
+            [x + 20, y + 73, x + 50, y + 97],
+            fill=(50, 40, 0, 220),
+            outline=(255, 215, 0),
+            width=2,
+        )
+        if img_corona:
+          img_final.paste(img_corona, (x + 19, y + 70), img_corona)
+        else:
+          d.text((x + 24, y + 75), "👑", fill=(255, 215, 0))
+      elif is_checked:
+        d.rectangle(
+            [x + 22, y + 75, x + 48, y + 95], outline=(0, 255, 100), width=1
+        )
+        if img_check:
+          img_final.paste(img_check, (x + 22, y + 73), img_check)
+        else:
+          d.text((x + 28, y + 76), "✓", fill=(0, 255, 100))
 
   buf = io.BytesIO()
   img_final.save(buf, format="PNG")
@@ -844,6 +848,13 @@ if os.path.exists(IMG_FOLDER):
   str_lit.markdown("---")
   str_lit.subheader("🖼️ Generar Tarjetas de Colección")
 
+  # --- OPCIÓN PARA MODO PLANTILLA LIMPIA ---
+  modo_plantilla = str_lit.checkbox(
+      "🖨️ Modo Plantilla Limpia (Ocultar marcados, coronas y contadores de progreso)",
+      value=False,
+      help="Activa esta opción para exportar las tarjetas en blanco, sin mostrar qué espíritus tienes obtenidos o dominados."
+  )
+
   fondo_custom_usuario = str_lit.file_uploader(
       "🎨 (Opcional) Subir imagen de fondo personalizada para la tarjeta",
       type=["png", "jpg", "jpeg", "webp"],
@@ -858,6 +869,7 @@ if os.path.exists(IMG_FOLDER):
         archivos_activos_tarjeta,
         usar_fondo_app=False,
         imagen_custom=fondo_custom_usuario,
+        mostrar_marcas=not modo_plantilla,
     )
     str_lit.download_button(
         label=(
@@ -899,6 +911,7 @@ if os.path.exists(IMG_FOLDER):
                       titulo_personalizado=f"CATEGORÍA: {cat.upper()}",
                       usar_fondo_app=False,
                       imagen_custom=fondo_custom_usuario,
+                      mostrar_marcas=not modo_plantilla,
                   )
                 str_lit.download_button(
                     label=f"💾 Descargar {cat}.png",
@@ -937,6 +950,7 @@ if os.path.exists(IMG_FOLDER):
                       titulo_personalizado=f"VARIANTE: {var.upper()}",
                       usar_fondo_app=False,
                       imagen_custom=fondo_custom_usuario,
+                      mostrar_marcas=not modo_plantilla,
                   )
                 str_lit.download_button(
                     label=f"💾 Descargar {var}.png",
@@ -951,7 +965,7 @@ if os.path.exists(IMG_FOLDER):
 
     # --- MENÚS PLEGABLES PARA SELECCIONAR POR CATEGORÍA Y VARIANTE EN TARJETA A MEDIDA ---
     with str_lit.expander(
-        "🛠️️ Seleccionar espíritus para tarjeta a medida (Por Categoría y Variante)"
+        "🛠 Seleccionar espíritus para tarjeta a medida (Por Categoría y Variante)"
     ):
       str_lit.markdown(
           "Selecciona categorías o variantes completas para armar tu tarjeta personalizada de forma rápida:"
@@ -1029,6 +1043,7 @@ if os.path.exists(IMG_FOLDER):
           titulo_personalizado=titulo_custom_input,
           usar_fondo_app=False,
           imagen_custom=fondo_custom_usuario,
+          mostrar_marcas=not modo_plantilla,
       )
       str_lit.download_button(
           label=(
