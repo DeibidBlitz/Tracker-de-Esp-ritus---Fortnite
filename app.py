@@ -217,7 +217,7 @@ def generar_imagen_coleccion(
   filas = (len(lista_ordenada_archivos) // columnas) + 1
 
   ancho_total = (columnas * ancho_celda) + (padding_lateral * 2)
-  alto_total = (filas * alto_celda) + padding_superior + 50
+  alto_total = (filas * alto_celda) + padding_superior + 55
 
   ruta_fondo = (
       IMAGEN_FONDO_APP_PATH
@@ -269,6 +269,7 @@ def generar_imagen_coleccion(
 
   img_final = Image.alpha_composite(img_final, capa_ui)
 
+  # Generar y pegar código QR
   qr_gen = qrcode.QRCode(
       version=1,
       error_correction=qrcode.constants.ERROR_CORRECT_M,
@@ -289,11 +290,26 @@ def generar_imagen_coleccion(
   try:
     font_principal = ImageFont.truetype(ruta_fuente, 28)
     font_contador = ImageFont.truetype(ruta_fuente, 22)
+    font_qr_msg = ImageFont.truetype(ruta_fuente, 13)
   except IOError:
     font_principal = ImageFont.load_default()
     font_contador = ImageFont.load_default()
+    font_qr_msg = ImageFont.load_default()
 
   d = ImageDraw.Draw(img_final)
+
+  # Dibujar mensaje "¡Crea tu propia plantilla!" arriba del QR
+  texto_qr_msg = "¡Crea tu propia plantilla!"
+  bbox_msg = d.textbbox((0, 0), texto_qr_msg, font=font_qr_msg)
+  w_msg = bbox_msg[2] - bbox_msg[0]
+  h_msg = bbox_msg[3] - bbox_msg[1]
+  
+  pos_msg_x = pos_qr_x + (img_qr_pil.width - w_msg) // 2
+  pos_msg_y = pos_qr_y - h_msg - 5
+
+  d.text((pos_msg_x + 1, pos_msg_y + 1), texto_qr_msg, fill=(0, 0, 0, 255), font=font_qr_msg)
+  d.text((pos_msg_x, pos_msg_y), texto_qr_msg, fill=(255, 255, 255, 255), font=font_qr_msg)
+
   texto_titulo = (
       titulo_personalizado
       if titulo_personalizado
