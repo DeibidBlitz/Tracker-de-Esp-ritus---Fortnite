@@ -762,7 +762,6 @@ if os.path.exists(IMG_FOLDER):
   str_lit.subheader("📋 Lista de Colección")
 
   # --- RENDIMIENTO MÁXIMO: Selector de Categoría Activa en la Vista Principal ---
-  # Si el filtro lateral está en "Todas", permitimos elegir una categoría específica aquí para que cargue al instante.
   categorias_permitidas = [
       cat for cat in categorias_disponibles
       if filtro_cat_lateral == "Todas" or cat == filtro_cat_lateral
@@ -855,7 +854,8 @@ if os.path.exists(IMG_FOLDER):
                 str_lit.rerun()
 
             with c_btn2:
-              etiqueta_dom = "Dominado 👑" if is_dom else "Dominar ⭐"
+              # Cambiado de "Dominar ⭐" a "Dominar ⬜" para evitar confusión visual con la corona
+              etiqueta_dom = "Dominado 👑" if is_dom else "Dominar ⬜"
               if is_checked:
                 if str_lit.button(
                     etiqueta_dom, key=f"dom_{nombre_base}", use_container_width=True, help="Marcar como dominado"
