@@ -269,7 +269,6 @@ def generar_imagen_coleccion(
 
   img_final = Image.alpha_composite(img_final, capa_ui)
 
-  # Generar y pegar código QR
   qr_gen = qrcode.QRCode(
       version=1,
       error_correction=qrcode.constants.ERROR_CORRECT_M,
@@ -298,7 +297,6 @@ def generar_imagen_coleccion(
 
   d = ImageDraw.Draw(img_final)
 
-  # Dibujar mensaje "¡Crea tu propia plantilla!" arriba del QR
   texto_qr_msg = "¡Crea tu propia plantilla!"
   bbox_msg = d.textbbox((0, 0), texto_qr_msg, font=font_qr_msg)
   w_msg = bbox_msg[2] - bbox_msg[0]
@@ -763,108 +761,116 @@ if os.path.exists(IMG_FOLDER):
 
   str_lit.subheader("📋 Lista de Colección")
 
-  for categoria, grupo in groupby(
-      archivos_ordenados, key=obtener_titulo_categoria
-  ):
-    if filtro_cat_lateral != "Todas" and categoria != filtro_cat_lateral:
-      continue
+  # --- RENDIMIENTO OPTIMIZADO: Pestañas por categoría ---
+  categorias_a_mostrar = [
+      cat for cat in categorias_disponibles
+      if filtro_cat_lateral == "Todas" or cat == filtro_cat_lateral
+  ]
 
-    lista_grupo = list(grupo)
-    grupo_filtrado = []
-    for archivo in lista_grupo:
-      nombre_base = os.path.splitext(archivo)[0]
-      variante_actual = obtener_variante(archivo)
+  if not categorias_a_mostrar:
+    str_lit.info("No hay categorías que coincidan con el filtro.")
+  else:
+    tabs_categorias = str_lit.tabs(categorias_a_mostrar)
 
-      if (
-          filtro_var_lateral != "Todas las variantes"
-          and variante_actual != filtro_var_lateral
-      ):
-        continue
+    for idx, categoria in enumerate(categorias_a_mostrar):
+      with tabs_categorias[idx]:
+        archivos_cat = [
+            f for f in archivos_ordenados if obtener_titulo_categoria(f) == categoria
+        ]
+        
+        grupo_filtrado = []
+        for archivo in archivos_cat:
+          nombre_base = os.path.splitext(archivo)[0]
+          variante_actual = obtener_variante(archivo)
 
-      nombre_mostrado = obtener_nombre_limpio(nombre_base)
-      if (
-          busqueda_texto
-          and busqueda_texto.lower() not in nombre_mostrado.lower()
-          and busqueda_texto.lower() not in nombre_base.lower()
-      ):
-        continue
-      grupo_filtrado.append(archivo)
+          if (
+              filtro_var_lateral != "Todas las variantes"
+              and variante_actual != filtro_var_lateral
+          ):
+            continue
 
-    if not grupo_filtrado:
-      continue
+          nombre_mostrado = obtener_nombre_limpio(nombre_base)
+          if (
+              busqueda_texto
+              and busqueda_texto.lower() not in nombre_mostrado.lower()
+              and busqueda_texto.lower() not in nombre_base.lower()
+          ):
+            continue
+          grupo_filtrado.append(archivo)
 
-    str_lit.markdown(f"### {categoria}")
-    cols = str_lit.columns(5)
+        if not grupo_filtrado:
+          str_lit.info(f"No hay espíritus en esta categoría con los filtros actuales.")
+          continue
 
-    for i, archivo in enumerate(grupo_filtrado):
-      nombre_base = os.path.splitext(archivo)[0]
-      nombre_mostrado = obtener_nombre_limpio(nombre_base)
-      proximo_lanzamiento = es_proximo(archivo)
+        cols = str_lit.columns(5)
+        for i, archivo in enumerate(grupo_filtrado):
+          nombre_base = os.path.splitext(archivo)[0]
+          nombre_mostrado = obtener_nombre_limpio(nombre_base)
+          proximo_lanzamiento = es_proximo(archivo)
 
-      with cols[i % 5]:
-        if proximo_lanzamiento:
-          str_lit.markdown(
-              f"""
-              <div style='text-align: center; opacity: 0.35; margin-bottom: 10px;'>
-                  <img src='app/static/{IMG_FOLDER}/{archivo}' width='100' style='border-radius: 8px;'>
-                  <div style='font-weight: bold; font-size: 13px; color: white;'>{nombre_mostrado}</div>
-                  <div style='font-size: 11px; color: #aaa; margin-top: 2px;'>🔒 Próximamente</div>
-              </div>
-              """,
-              unsafe_allow_html=True,
-          )
-        else:
-          str_lit.image(f"{IMG_FOLDER}/{archivo}", width=100)
-          str_lit.markdown(
-              f"<div style='text-align: center; font-weight: bold; font-size:"
-              f" 13px; margin-bottom: 5px;'>{nombre_mostrado}</div>",
-              unsafe_allow_html=True,
-          )
-
-          is_checked = nombre_base in str_lit.session_state.seleccionados
-          is_dom = nombre_base in str_lit.session_state.dominados
-
-          c_btn1, c_btn2 = str_lit.columns(2)
-
-          with c_btn1:
-            etiqueta_chk = "Obtenido ✅" if is_checked else "Obtener ⬜"
-            if str_lit.button(
-                etiqueta_chk, key=f"chk_{nombre_base}", use_container_width=True, help="Marcar como obtenido"
-            ):
-              str_lit.session_state.mensaje_restauracion = None
-              if is_checked:
-                str_lit.session_state.seleccionados.remove(nombre_base)
-                if nombre_base in str_lit.session_state.dominados:
-                  str_lit.session_state.dominados.remove(nombre_base)
-              else:
-                str_lit.session_state.seleccionados.add(nombre_base)
-              str_lit.rerun()
-
-          with c_btn2:
-            etiqueta_dom = "Dominado 👑" if is_dom else "Dominar ⭐"
-            if is_checked:
-              if str_lit.button(
-                  etiqueta_dom, key=f"dom_{nombre_base}", use_container_width=True, help="Marcar como dominado"
-              ):
-                str_lit.session_state.mensaje_restauracion = None
-                if is_dom:
-                  str_lit.session_state.dominados.remove(nombre_base)
-                else:
-                  str_lit.session_state.dominados.add(nombre_base)
-                str_lit.rerun()
-            else:
-              str_lit.button(
-                  "Bloqueado 🔒",
-                  key=f"dom_{nombre_base}",
-                  disabled=True,
-                  use_container_width=True,
-                  help="Primero debes marcarlo como obtenido"
+          with cols[i % 5]:
+            if proximo_lanzamiento:
+              str_lit.markdown(
+                  f"""
+                  <div style='text-align: center; opacity: 0.35; margin-bottom: 10px;'>
+                      <img src='app/static/{IMG_FOLDER}/{archivo}' width='100' style='border-radius: 8px;'>
+                      <div style='font-weight: bold; font-size: 13px; color: white;'>{nombre_mostrado}</div>
+                      <div style='font-size: 11px; color: #aaa; margin-top: 2px;'>🔒 Próximamente</div>
+                  </div>
+                  """,
+                  unsafe_allow_html=True,
               )
+            else:
+              str_lit.image(f"{IMG_FOLDER}/{archivo}", width=100)
+              str_lit.markdown(
+                  f"<div style='text-align: center; font-weight: bold; font-size:"
+                  f" 13px; margin-bottom: 5px;'>{nombre_mostrado}</div>",
+                  unsafe_allow_html=True,
+              )
+
+              is_checked = nombre_base in str_lit.session_state.seleccionados
+              is_dom = nombre_base in str_lit.session_state.dominados
+
+              c_btn1, c_btn2 = str_lit.columns(2)
+
+              with c_btn1:
+                etiqueta_chk = "Obtenido ✅" if is_checked else "Obtener ⬜"
+                if str_lit.button(
+                    etiqueta_chk, key=f"chk_{nombre_base}", use_container_width=True, help="Marcar como obtenido"
+                ):
+                  str_lit.session_state.mensaje_restauracion = None
+                  if is_checked:
+                    str_lit.session_state.seleccionados.remove(nombre_base)
+                    if nombre_base in str_lit.session_state.dominados:
+                      str_lit.session_state.dominados.remove(nombre_base)
+                  else:
+                    str_lit.session_state.seleccionados.add(nombre_base)
+                  str_lit.rerun()
+
+              with c_btn2:
+                etiqueta_dom = "Dominado 👑" if is_dom else "Dominar ⭐"
+                if is_checked:
+                  if str_lit.button(
+                      etiqueta_dom, key=f"dom_{nombre_base}", use_container_width=True, help="Marcar como dominado"
+                  ):
+                    str_lit.session_state.mensaje_restauracion = None
+                    if is_dom:
+                      str_lit.session_state.dominados.remove(nombre_base)
+                    else:
+                      str_lit.session_state.dominados.add(nombre_base)
+                    str_lit.rerun()
+                else:
+                  str_lit.button(
+                      "Bloqueado 🔒",
+                      key=f"dom_{nombre_base}",
+                      disabled=True,
+                      use_container_width=True,
+                      help="Primero debes marcarlo como obtenido"
+                  )
 
   str_lit.markdown("---")
   str_lit.subheader("🖼️ Generar Tarjetas de Colección")
 
-  # --- OPCIÓN PARA MODO PLANTILLA LIMPIA ---
   modo_plantilla = str_lit.checkbox(
       "🖨️ Modo Plantilla Limpia (Ocultar marcados, coronas y contadores de progreso)",
       value=False,
@@ -1040,6 +1046,28 @@ if os.path.exists(IMG_FOLDER):
             on_change=make_toggle_custom_var(ids_var)
         )
 
+      str_lit.markdown("---")
+      str_lit.markdown("### 🔍 Selección Individual Rápida (Multiselect)")
+      
+      opciones_mapa = {obtener_nombre_limpio(os.path.splitext(f)[0]): os.path.splitext(f)[0] for f in archivos_activos_tarjeta}
+      nombres_disponibles = list(opciones_mapa.keys())
+      
+      nombres_actuales_seleccionados = [
+          nombre for nombre, fid in opciones_mapa.items() if fid in str_lit.session_state.custom_tarjeta_ids
+      ]
+
+      seleccion_multiselect = str_lit.multiselect(
+          "Busca y selecciona espíritus individualmente:",
+          options=nombres_disponibles,
+          default=nombres_actuales_seleccionados,
+          key="multiselect_custom_spirits"
+      )
+
+      nueva_seleccion_ids = {opciones_mapa[nombre] for nombre in seleccion_multiselect}
+      if nueva_seleccion_ids != str_lit.session_state.custom_tarjeta_ids:
+        str_lit.session_state.custom_tarjeta_ids = nueva_seleccion_ids
+        str_lit.rerun()
+
     archivos_custom_finales = [
         f
         for f in archivos_activos_tarjeta
@@ -1072,7 +1100,7 @@ if os.path.exists(IMG_FOLDER):
       )
     else:
       str_lit.info(
-          "Selecciona al menos una categoría o variante en el menú de arriba"
+          "Selecciona al menos una categoría, variante o espíritu en el menú de arriba"
           " para generar tu tarjeta personalizada."
       )
   else:
