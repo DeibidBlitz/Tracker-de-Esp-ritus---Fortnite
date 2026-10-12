@@ -479,17 +479,9 @@ if os.path.exists(IMG_FOLDER):
   with str_lit.sidebar:
     str_lit.header("⚙️ Opciones")
 
-    str_lit.markdown("**Filtrar por Categoría**")
-    filtro_cat_lateral = str_lit.selectbox(
-        "Categoría", ["Todas"] + categorias_disponibles, label_visibility="collapsed"
-    )
-
-    str_lit.markdown("")
-    str_lit.markdown("**Filtrar por Variante**")
-    filtro_var_lateral = str_lit.selectbox(
-        "Variante",
-        ["Todas las variantes"] + variantes_disponibles,
-        label_visibility="collapsed",
+    str_lit.markdown("**Modo de Visualización**")
+    modo_visualizacion = str_lit.selectbox(
+        "Modo", ["Por Categoría", "Por Variante"], label_visibility="collapsed"
     )
 
     str_lit.markdown("---")
@@ -761,119 +753,112 @@ if os.path.exists(IMG_FOLDER):
 
   str_lit.subheader("📋 Lista de Colección")
 
-  # --- RENDIMIENTO MÁXIMO: Selector de Categoría Activa en la Vista Principal ---
-  categorias_permitidas = [
-      cat for cat in categorias_disponibles
-      if filtro_cat_lateral == "Todas" or cat == filtro_cat_lateral
-  ]
-
-  if not categorias_permitidas:
-    str_lit.info("No hay categorías que coincidan con el filtro.")
-  else:
-    if filtro_cat_lateral == "Todas":
-      cat_seleccionada = str_lit.selectbox(
-          "📂 Selecciona la categoría a visualizar para máxima velocidad:",
-          categorias_permitidas,
-          key="select_categoria_principal"
-      )
-    else:
-      cat_seleccionada = categorias_permitidas[0]
-
-    str_lit.markdown(f"### Categoría: {cat_seleccionada}")
-    
-    archivos_cat = [
-        f for f in archivos_ordenados if obtener_titulo_categoria(f) == cat_seleccionada
+  # --- SELECTOR VISIBLE DIRECTO EN EL TRACKER (Independiente de la barra lateral) ---
+  if modo_visualizacion == "Por Categoría":
+    str_lit.markdown("📂 **Selecciona la categoría a visualizar:**")
+    cat_seleccionada_principal = str_lit.selectbox(
+        "Categoría principal",
+        categorias_disponibles,
+        key="select_cat_principal_vista",
+        label_visibility="collapsed"
+    )
+    str_lit.markdown(f"### Categoría: {cat_seleccionada_principal}")
+    archivos_fuente = [
+        f for f in archivos_ordenados if obtener_titulo_categoria(f) == cat_seleccionada_principal
     ]
-    
-    grupo_filtrado = []
-    for archivo in archivos_cat:
+  else:
+    str_lit.markdown("🎨 **Selecciona la variante a visualizar:**")
+    var_seleccionada_principal = str_lit.selectbox(
+        "Variante principal",
+        variantes_disponibles,
+        key="select_var_principal_vista",
+        label_visibility="collapsed"
+    )
+    str_lit.markdown(f"### Variante: {var_seleccionada_principal}")
+    archivos_fuente = [
+        f for f in archivos_ordenados if obtener_variante(f) == var_seleccionada_principal
+    ]
+
+  grupo_filtrado = []
+  for archivo in archivos_fuente:
+    nombre_base = os.path.splitext(archivo)[0]
+    nombre_mostrado = obtener_nombre_limpio(nombre_base)
+    if (
+        busqueda_texto
+        and busqueda_texto.lower() not in nombre_mostrado.lower()
+        and busqueda_texto.lower() not in nombre_base.lower()
+    ):
+      continue
+    grupo_filtrado.append(archivo)
+
+  if not grupo_filtrado:
+    str_lit.info(f"No hay espíritus que coincidan con los filtros actuales.")
+  else:
+    cols = str_lit.columns(5)
+    for i, archivo in enumerate(grupo_filtrado):
       nombre_base = os.path.splitext(archivo)[0]
-      variante_actual = obtener_variante(archivo)
-
-      if (
-          filtro_var_lateral != "Todas las variantes"
-          and variante_actual != filtro_var_lateral
-      ):
-        continue
-
       nombre_mostrado = obtener_nombre_limpio(nombre_base)
-      if (
-          busqueda_texto
-          and busqueda_texto.lower() not in nombre_mostrado.lower()
-          and busqueda_texto.lower() not in nombre_base.lower()
-      ):
-        continue
-      grupo_filtrado.append(archivo)
+      proximo_lanzamiento = es_proximo(archivo)
 
-    if not grupo_filtrado:
-      str_lit.info(f"No hay espíritus en esta categoría con los filtros actuales.")
-    else:
-      cols = str_lit.columns(5)
-      for i, archivo in enumerate(grupo_filtrado):
-        nombre_base = os.path.splitext(archivo)[0]
-        nombre_mostrado = obtener_nombre_limpio(nombre_base)
-        proximo_lanzamiento = es_proximo(archivo)
+      with cols[i % 5]:
+        if proximo_lanzamiento:
+          str_lit.markdown(
+              f"""
+              <div style='text-align: center; opacity: 0.35; margin-bottom: 10px;'>
+                  <img src='app/static/{IMG_FOLDER}/{archivo}' width='100' style='border-radius: 8px;'>
+                  <div style='font-weight: bold; font-size: 13px; color: white;'>{nombre_mostrado}</div>
+                  <div style='font-size: 11px; color: #aaa; margin-top: 2px;'>🔒 Próximamente</div>
+              </div>
+              """,
+              unsafe_allow_html=True,
+          )
+        else:
+          str_lit.image(f"{IMG_FOLDER}/{archivo}", width=100)
+          str_lit.markdown(
+              f"<div style='text-align: center; font-weight: bold; font-size:"
+              f" 13px; margin-bottom: 5px;'>{nombre_mostrado}</div>",
+              unsafe_allow_html=True,
+          )
 
-        with cols[i % 5]:
-          if proximo_lanzamiento:
-            str_lit.markdown(
-                f"""
-                <div style='text-align: center; opacity: 0.35; margin-bottom: 10px;'>
-                    <img src='app/static/{IMG_FOLDER}/{archivo}' width='100' style='border-radius: 8px;'>
-                    <div style='font-weight: bold; font-size: 13px; color: white;'>{nombre_mostrado}</div>
-                    <div style='font-size: 11px; color: #aaa; margin-top: 2px;'>🔒 Próximamente</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-          else:
-            str_lit.image(f"{IMG_FOLDER}/{archivo}", width=100)
-            str_lit.markdown(
-                f"<div style='text-align: center; font-weight: bold; font-size:"
-                f" 13px; margin-bottom: 5px;'>{nombre_mostrado}</div>",
-                unsafe_allow_html=True,
-            )
+          is_checked = nombre_base in str_lit.session_state.seleccionados
+          is_dom = nombre_base in str_lit.session_state.dominados
 
-            is_checked = nombre_base in str_lit.session_state.seleccionados
-            is_dom = nombre_base in str_lit.session_state.dominados
+          c_btn1, c_btn2 = str_lit.columns(2)
 
-            c_btn1, c_btn2 = str_lit.columns(2)
+          with c_btn1:
+            etiqueta_chk = "Obtenido ✅" if is_checked else "Obtener ⬜"
+            if str_lit.button(
+                etiqueta_chk, key=f"chk_{nombre_base}", use_container_width=True, help="Marcar como obtenido"
+            ):
+              str_lit.session_state.mensaje_restauracion = None
+              if is_checked:
+                str_lit.session_state.seleccionados.remove(nombre_base)
+                if nombre_base in str_lit.session_state.dominados:
+                  str_lit.session_state.dominados.remove(nombre_base)
+              else:
+                str_lit.session_state.seleccionados.add(nombre_base)
+              str_lit.rerun()
 
-            with c_btn1:
-              etiqueta_chk = "Obtenido ✅" if is_checked else "Obtener ⬜"
+          with c_btn2:
+            etiqueta_dom = "Dominado 👑" if is_dom else "Dominar ⬜"
+            if is_checked:
               if str_lit.button(
-                  etiqueta_chk, key=f"chk_{nombre_base}", use_container_width=True, help="Marcar como obtenido"
+                  etiqueta_dom, key=f"dom_{nombre_base}", use_container_width=True, help="Marcar como dominado"
               ):
                 str_lit.session_state.mensaje_restauracion = None
-                if is_checked:
-                  str_lit.session_state.seleccionados.remove(nombre_base)
-                  if nombre_base in str_lit.session_state.dominados:
-                    str_lit.session_state.dominados.remove(nombre_base)
+                if is_dom:
+                  str_lit.session_state.dominados.remove(nombre_base)
                 else:
-                  str_lit.session_state.seleccionados.add(nombre_base)
+                  str_lit.session_state.dominados.add(nombre_base)
                 str_lit.rerun()
-
-            with c_btn2:
-              # Cambiado de "Dominar ⭐" a "Dominar ⬜" para evitar confusión visual con la corona
-              etiqueta_dom = "Dominado 👑" if is_dom else "Dominar ⬜"
-              if is_checked:
-                if str_lit.button(
-                    etiqueta_dom, key=f"dom_{nombre_base}", use_container_width=True, help="Marcar como dominado"
-                ):
-                  str_lit.session_state.mensaje_restauracion = None
-                  if is_dom:
-                    str_lit.session_state.dominados.remove(nombre_base)
-                  else:
-                    str_lit.session_state.dominados.add(nombre_base)
-                  str_lit.rerun()
-              else:
-                str_lit.button(
-                    "Bloqueado 🔒",
-                    key=f"dom_{nombre_base}",
-                    disabled=True,
-                    use_container_width=True,
-                    help="Primero debes marcarlo como obtenido"
-                )
+            else:
+              str_lit.button(
+                  "Bloqueado 🔒",
+                  key=f"dom_{nombre_base}",
+                  disabled=True,
+                  use_container_width=True,
+                  help="Primero debes marcarlo como obtenido"
+              )
 
   str_lit.markdown("---")
   str_lit.subheader("🖼️ Generar Tarjetas de Colección")
