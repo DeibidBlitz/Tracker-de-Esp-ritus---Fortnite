@@ -222,7 +222,6 @@ def generar_imagen_coleccion(
   ancho_total = (columnas * ancho_celda) + (padding_lateral * 2)
   alto_total = (filas * alto_celda) + padding_superior + 55
 
-  # Selección inteligente del fondo según el tipo de tarjeta
   if imagen_custom is not None:
     ruta_fondo = None
   elif usar_fondo_app and os.path.exists(IMAGEN_FONDO_APP_PATH):
@@ -458,6 +457,7 @@ if os.path.exists(IMG_FOLDER):
       for f in os.listdir(IMG_FOLDER)
       if f.lower().endswith(".png")
       and not f.startswith("num_")
+      and not f.lower().startswith("fondo_")
       and f.lower() not in archivos_ignorar
   ])
   archivos_ordenados = list(archivos_crudos)
@@ -912,7 +912,7 @@ if os.path.exists(IMG_FOLDER):
     with str_lit.expander("📁 Tarjetas por Categoría"):
       str_lit.markdown(
           "Despliega y genera únicamente la tarjeta de la categoría que"
-          " necesites (utilizará 'fondo_categoria.png' si existe):"
+          " necesites para optimizar el rendimiento:"
       )
       
       for cat in categorias_disponibles:
@@ -952,7 +952,7 @@ if os.path.exists(IMG_FOLDER):
     with str_lit.expander("🎨 Tarjetas por Variante"):
       str_lit.markdown(
           "Despliega y genera únicamente la tarjeta de la variante que"
-          " necesites (utilizará 'fondo_variante.png' si existe):"
+          " necesites (Ej. Normal, Dorado, Hacker, etc.):"
       )
       
       for var in variantes_disponibles:
