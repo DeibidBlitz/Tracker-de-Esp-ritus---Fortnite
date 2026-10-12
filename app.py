@@ -12,6 +12,8 @@ import streamlit as str_lit
 IMG_FOLDER = "imagenes"
 IMAGEN_FONDO_EXPORT_PATH = os.path.join(IMG_FOLDER, "fondo_catalogo.png")
 IMAGEN_FONDO_APP_PATH = os.path.join(IMG_FOLDER, "fondo_app.png")
+IMAGEN_FONDO_CATEGORIA_PATH = os.path.join(IMG_FOLDER, "fondo_categoria.png")
+IMAGEN_FONDO_VARIANTE_PATH = os.path.join(IMG_FOLDER, "fondo_variante.png")
 CHECK_ICON_PATH = os.path.join(IMG_FOLDER, "check_verde.png")
 CORONA_ICON_PATH = os.path.join(IMG_FOLDER, "corona.png")
 LINKTREE_URL = "https://linktr.ee/deibid_blitz"
@@ -202,6 +204,7 @@ def generar_imagen_coleccion(
     usar_fondo_app=False,
     imagen_custom=None,
     mostrar_marcas=True,
+    tipo_tarjeta="general",
 ):
   if not lista_ordenada_archivos:
     img_vacia = Image.new("RGBA", (400, 150), color=(20, 20, 20, 255))
@@ -219,16 +222,22 @@ def generar_imagen_coleccion(
   ancho_total = (columnas * ancho_celda) + (padding_lateral * 2)
   alto_total = (filas * alto_celda) + padding_superior + 55
 
-  ruta_fondo = (
-      IMAGEN_FONDO_APP_PATH
-      if usar_fondo_app and os.path.exists(IMAGEN_FONDO_APP_PATH)
-      else IMAGEN_FONDO_EXPORT_PATH
-  )
+  # Selección inteligente del fondo según el tipo de tarjeta
+  if imagen_custom is not None:
+    ruta_fondo = None
+  elif usar_fondo_app and os.path.exists(IMAGEN_FONDO_APP_PATH):
+    ruta_fondo = IMAGEN_FONDO_APP_PATH
+  elif tipo_tarjeta == "categoria" and os.path.exists(IMAGEN_FONDO_CATEGORIA_PATH):
+    ruta_fondo = IMAGEN_FONDO_CATEGORIA_PATH
+  elif tipo_tarjeta == "variante" and os.path.exists(IMAGEN_FONDO_VARIANTE_PATH):
+    ruta_fondo = IMAGEN_FONDO_VARIANTE_PATH
+  else:
+    ruta_fondo = IMAGEN_FONDO_EXPORT_PATH
 
   if imagen_custom is not None:
     fondo_original = Image.open(imagen_custom).convert("RGBA")
     img_final = fondo_original.resize((ancho_total, alto_total))
-  elif os.path.exists(ruta_fondo):
+  elif ruta_fondo and os.path.exists(ruta_fondo):
     fondo_original = Image.open(ruta_fondo).convert("RGBA")
     img_final = fondo_original.resize((ancho_total, alto_total))
   else:
@@ -441,6 +450,8 @@ if os.path.exists(IMG_FOLDER):
       "corona.png",
       "fondo_app.png",
       "fondo_catalogo.png",
+      "fondo_categoria.png",
+      "fondo_variante.png",
   }
   archivos_crudos = sorted([
       f
@@ -753,7 +764,6 @@ if os.path.exists(IMG_FOLDER):
 
   str_lit.subheader("📋 Lista de Colección")
 
-  # --- SELECTOR VISIBLE DIRECTO EN EL TRACKER (Independiente de la barra lateral) ---
   if modo_visualizacion == "Por Categoría":
     str_lit.markdown("📂 **Selecciona la categoría a visualizar:**")
     cat_seleccionada_principal = str_lit.selectbox(
@@ -884,6 +894,7 @@ if os.path.exists(IMG_FOLDER):
         usar_fondo_app=False,
         imagen_custom=fondo_custom_usuario,
         mostrar_marcas=not modo_plantilla,
+        tipo_tarjeta="general",
     )
     str_lit.download_button(
         label=(
@@ -901,7 +912,7 @@ if os.path.exists(IMG_FOLDER):
     with str_lit.expander("📁 Tarjetas por Categoría"):
       str_lit.markdown(
           "Despliega y genera únicamente la tarjeta de la categoría que"
-          " necesites para optimizar el rendimiento:"
+          " necesites (utilizará 'fondo_categoria.png' si existe):"
       )
       
       for cat in categorias_disponibles:
@@ -926,6 +937,7 @@ if os.path.exists(IMG_FOLDER):
                       usar_fondo_app=False,
                       imagen_custom=fondo_custom_usuario,
                       mostrar_marcas=not modo_plantilla,
+                      tipo_tarjeta="categoria",
                   )
                 str_lit.download_button(
                     label=f"💾 Descargar {cat}.png",
@@ -940,7 +952,7 @@ if os.path.exists(IMG_FOLDER):
     with str_lit.expander("🎨 Tarjetas por Variante"):
       str_lit.markdown(
           "Despliega y genera únicamente la tarjeta de la variante que"
-          " necesites (Ej. Normal, Dorado, Hacker, Dulce o Truco, etc.):"
+          " necesites (utilizará 'fondo_variante.png' si existe):"
       )
       
       for var in variantes_disponibles:
@@ -965,6 +977,7 @@ if os.path.exists(IMG_FOLDER):
                       usar_fondo_app=False,
                       imagen_custom=fondo_custom_usuario,
                       mostrar_marcas=not modo_plantilla,
+                      tipo_tarjeta="variante",
                   )
                 str_lit.download_button(
                     label=f"💾 Descargar {var}.png",
@@ -1080,6 +1093,7 @@ if os.path.exists(IMG_FOLDER):
           usar_fondo_app=False,
           imagen_custom=fondo_custom_usuario,
           mostrar_marcas=not modo_plantilla,
+          tipo_tarjeta="general",
       )
       str_lit.download_button(
           label=(
