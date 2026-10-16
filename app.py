@@ -120,6 +120,8 @@ def obtener_variante(nombre_archivo):
     return "Hacker"
   elif "dulce" in nombre_base or "truco" in nombre_base or "halloween" in nombre_base:
     return "Dulce o Truco"
+  elif "patito" in nombre_base:
+    return "Patito"
   else:
     return "Normal"
 
@@ -473,7 +475,7 @@ if os.path.exists(IMG_FOLDER):
       categorias_disponibles.append(cat)
 
   cat_to_ids = {}
-  variantes_disponibles = ["Normal", "Dorado", "Hacker", "Hacker de Botín", "Cazarecompensas", "Dulce o Truco"]
+  variantes_disponibles = ["Normal", "Dorado", "Hacker", "Hacker de Botín", "Cazarecompensas", "Dulce o Truco", "Patito"]
   var_to_ids = {v: [] for v in variantes_disponibles}
 
   for f in archivos_crudos:
