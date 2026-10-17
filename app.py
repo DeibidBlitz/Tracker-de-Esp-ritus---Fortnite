@@ -530,25 +530,26 @@ if os.path.exists(IMG_FOLDER):
               str_lit.warning("Escribe un usuario.")
 
         with col_g:
-          if str_lit.button("💾 Guardar", use_container_width=True):
-            if user_cloud:
-              try:
-                # Guardamos tanto la puntuación como el estado completo de los sets en formato diccionario serializable
-                payload_datos = {
-                    "seleccionados": list(str_lit.session_state.seleccionados),
-                    "dominados": list(str_lit.session_state.dominados)
-                }
-                data_upsert = {
-                    "usuario": user_cloud,
-                    "puntuacion": len(str_lit.session_state.seleccionados),
-                    "datos": payload_datos
-                }
-                supabase.table("progreso_usuarios").upsert(data_upsert).execute()
-                str_lit.success("¡Progreso guardado en la nube!")
-              except Exception as err:
-                str_lit.error(f"Error al guardar: {err}")
-            else:
-              str_lit.warning("Escribe un usuario.")
+            if str_lit.button("💾 Guardar", use_container_width=True):
+                if user_cloud:
+                    try:
+                        # Guardamos el estado completo de los sets
+                        payload_datos = {
+                            "seleccionados": list(str_lit.session_state.seleccionados),
+                            "dominados": list(str_lit.session_state.dominados)
+                        }
+                        data_upsert = {
+                            "usuario": user_cloud,
+                            # 👑 AQUÍ CAMBIAMOS PARA QUE LA PUNTUACIÓN SEA EL TOTAL DE DOMINADOS
+                            "puntuacion": len(str_lit.session_state.dominados),
+                            "datos": payload_datos
+                        }
+                        supabase.table("progreso_usuarios").upsert(data_upsert).execute()
+                        str_lit.success("¡Progreso guardado en la nube!")
+                    except Exception as err:
+                        str_lit.error(f"Error al guardar: {err}")
+                else:
+                    str_lit.warning("Escribe un usuario.")
 
         str_lit.markdown("---")
         if str_lit.button("🏆 Cargar Tabla de Líderes", use_container_width=True):
