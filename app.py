@@ -1,3 +1,33 @@
+from supabase import create_client, Client
+import streamlit as st
+
+# Conectar con las credenciales guardadas en Secrets
+url: str = st.secrets["supabase"]["url"]
+key: str = st.secrets["supabase"]["key"]
+supabase: Client = create_client(url, key)
+
+# --- EJEMPLO DE USO ---
+st.subheader("Guardar Progreso")
+
+nombre_usuario = st.text_input("Ingresa tu usuario de Fortnite:")
+puntos = st.number_input("Puntuación / Progreso:", min_value=0, step=10)
+
+if st.button("Guardar en mi cuenta"):
+    if nombre_usuario:
+        # Insertar datos en la tabla de Supabase
+        data = {
+            "usuario": nombre_usuario,
+            "puntuacion": puntos
+        }
+        response = supabase.table("progreso_usuarios").insert(data).execute()
+        st.success(f"¡Progreso guardado para {nombre_usuario}!")
+    else:
+        st.warning("Por favor ingresa un nombre de usuario.")
+
+# --- MOSTRAR DATOS GUARDADOS ---
+if st.button("Cargar Tabla de Líderes"):
+    res = supabase.table("progreso_usuarios").select("*").execute()
+    st.write(res.data)
 from itertools import groupby
 import io
 import os
