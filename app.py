@@ -80,9 +80,6 @@ if "seleccionados" not in str_lit.session_state:
 if "dominados" not in str_lit.session_state:
   str_lit.session_state.dominados = set()
 
-if "custom_tarjeta_ids" not in str_lit.session_state:
-  str_lit.session_state.custom_tarjeta_ids = set()
-
 if "file_uploader_key" not in str_lit.session_state:
   str_lit.session_state.file_uploader_key = 0
 
@@ -990,102 +987,50 @@ if os.path.exists(IMG_FOLDER):
                 )
             str_lit.markdown("---")
 
-    str_lit.markdown("#### ✨ Crear Tarjeta Personalizada (Múltiples Espíritus)")
+    str_lit.markdown("#### ✨ Crear Tarjeta Personalizada (Múltiples Categorías/Variantes)")
 
-    # --- MENÚS PLEGABLES PARA SELECCIONAR POR CATEGORÍA Y VARIANTE EN TARJETA A MEDIDA ---
+    # --- MENÚS PLEGABLES PARA SELECCIONAR CATEGORÍAS Y VARIANTES ---
     with str_lit.expander(
-        "🛠 Seleccionar espíritus para tarjeta a medida (Por Categoría y Variante)"
+        "🛠 Seleccionar categorías y variantes para tarjeta a medida"
     ):
       str_lit.markdown(
-          "Selecciona categorías o variantes completas para armar tu tarjeta personalizada de forma rápida:"
+          "Selecciona las categorías y/o variantes que desees incluir en tu tarjeta personalizada:"
       )
 
       str_lit.markdown("### 📁 Seleccionar por Categoría")
+      categorias_custom_seleccionadas = []
       for cat in categorias_disponibles:
-        ids_cat = [os.path.splitext(i)[0] for i in archivos_activos_tarjeta if obtener_titulo_categoria(i) == cat]
-        if not ids_cat:
-          continue
-        
-        cat_all_custom = all(i in str_lit.session_state.custom_tarjeta_ids for i in ids_cat)
-
-        def make_toggle_custom_cat(c_ids):
-          def callback():
-            curr_all = all(i in str_lit.session_state.custom_tarjeta_ids for i in c_ids)
-            if curr_all:
-              for i in c_ids:
-                str_lit.session_state.custom_tarjeta_ids.discard(i)
-            else:
-              for i in c_ids:
-                str_lit.session_state.custom_tarjeta_ids.add(i)
-          return callback
-
-        str_lit.checkbox(
-            f"Categoría: {cat} ({len(ids_cat)} espíritus)",
-            value=cat_all_custom,
-            key=f"custom_cat_{cat}",
-            on_change=make_toggle_custom_cat(ids_cat)
-        )
+        if str_lit.checkbox(f"Categoría: {cat}", key=f"custom_cat_{cat}"):
+          categorias_custom_seleccionadas.append(cat)
 
       str_lit.markdown("---")
       str_lit.markdown("### 🎨 Seleccionar por Variante")
+      variantes_custom_seleccionadas = []
       for var in variantes_disponibles:
-        ids_var = [os.path.splitext(i)[0] for i in archivos_activos_tarjeta if obtener_variante(i) == var]
-        if not ids_var:
-          continue
-        
-        var_all_custom = all(i in str_lit.session_state.custom_tarjeta_ids for i in ids_var)
+        if str_lit.checkbox(f"Variante: {var}", key=f"custom_var_{var}"):
+          variantes_custom_seleccionadas.append(var)
 
-        def make_toggle_custom_var(v_ids):
-          def callback():
-            curr_all = all(i in str_lit.session_state.custom_tarjeta_ids for i in v_ids)
-            if curr_all:
-              for i in v_ids:
-                str_lit.session_state.custom_tarjeta_ids.discard(i)
-            else:
-              for i in v_ids:
-                str_lit.session_state.custom_tarjeta_ids.add(i)
-          return callback
-
-        str_lit.checkbox(
-            f"Variante: {var} ({len(ids_var)} espíritus)",
-            value=var_all_custom,
-            key=f"custom_var_{var}",
-            on_change=make_toggle_custom_var(ids_var)
-        )
-
-      str_lit.markdown("---")
-      str_lit.markdown("### 🔍 Selección Individual Rápida (Multiselect)")
-      
-      opciones_mapa = {obtener_nombre_limpio(os.path.splitext(f)[0]): os.path.splitext(f)[0] for f in archivos_activos_tarjeta}
-      nombres_disponibles = list(opciones_mapa.keys())
-      
-      nombres_actuales_seleccionados = [
-          nombre for nombre, fid in opciones_mapa.items() if fid in str_lit.session_state.custom_tarjeta_ids
-      ]
-
-      seleccion_multiselect = str_lit.multiselect(
-          "Busca y selecciona espíritus individualmente:",
-          options=nombres_disponibles,
-          default=nombres_actuales_seleccionados,
-          key="multiselect_custom_spirits"
-      )
-
-      nueva_seleccion_ids = {opciones_mapa[nombre] for nombre in seleccion_multiselect}
-      if nueva_seleccion_ids != str_lit.session_state.custom_tarjeta_ids:
-        str_lit.session_state.custom_tarjeta_ids = nueva_seleccion_ids
-        str_lit.rerun()
+    # Recopilar los IDs de espíritus basados estrictamente en las categorías y variantes marcadas
+    ids_custom_dinamicos = set()
+    for archivo in archivos_activos_tarjeta:
+      f_id = os.path.splitext(archivo)[0]
+      cat_actual = obtener_titulo_categoria(archivo)
+      var_actual = obtener_variante(archivo)
+      if cat_actual in categorias_custom_seleccionadas or var_actual in variantes_custom_seleccionadas:
+        ids_custom_dinamicos.add(f_id)
 
     archivos_custom_finales = [
         f
         for f in archivos_activos_tarjeta
-        if os.path.splitext(f)[0] in str_lit.session_state.custom_tarjeta_ids
+        if os.path.splitext(f)[0] in ids_custom_dinamicos
     ]
+
     titulo_custom_input = str_lit.text_input(
         "🏷️ Título para la tarjeta personalizada",
         value="MI SELECCIÓN DE ESPÍRITUS",
     )
 
-    # El botón de descarga ahora se muestra siempre, sin importar si hay espíritus seleccionados o no
+    # El botón de descarga ahora genera la tarjeta basándose en las categorías/variantes elegidas
     img_custom_bytes = generar_imagen_coleccion(
         archivos_custom_finales,
         str_lit.session_state.seleccionados,
