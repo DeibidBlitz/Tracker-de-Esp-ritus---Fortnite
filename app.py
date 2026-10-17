@@ -1006,20 +1006,25 @@ if os.path.exists(IMG_FOLDER):
         if not ids_cat:
           continue
         
-        currently_all_cat = all(i in str_lit.session_state.custom_tarjeta_ids for i in ids_cat)
-        chk_val_cat = str_lit.checkbox(
+        cat_all_custom = all(i in str_lit.session_state.custom_tarjeta_ids for i in ids_cat)
+
+        def make_toggle_custom_cat(c_ids):
+          def callback():
+            curr_all = all(i in str_lit.session_state.custom_tarjeta_ids for i in c_ids)
+            if curr_all:
+              for i in c_ids:
+                str_lit.session_state.custom_tarjeta_ids.discard(i)
+            else:
+              for i in c_ids:
+                str_lit.session_state.custom_tarjeta_ids.add(i)
+          return callback
+
+        str_lit.checkbox(
             f"Categoría: {cat} ({len(ids_cat)} espíritus)",
-            value=currently_all_cat,
-            key=f"custom_cat_{cat}"
+            value=cat_all_custom,
+            key=f"custom_cat_{cat}",
+            on_change=make_toggle_custom_cat(ids_cat)
         )
-        if chk_val_cat and not currently_all_cat:
-          for i in ids_cat:
-            str_lit.session_state.custom_tarjeta_ids.add(i)
-          str_lit.rerun()
-        elif not chk_val_cat and currently_all_cat:
-          for i in ids_cat:
-            str_lit.session_state.custom_tarjeta_ids.discard(i)
-          str_lit.rerun()
 
       str_lit.markdown("---")
       str_lit.markdown("### 🎨 Seleccionar por Variante")
@@ -1028,20 +1033,25 @@ if os.path.exists(IMG_FOLDER):
         if not ids_var:
           continue
         
-        currently_all_var = all(i in str_lit.session_state.custom_tarjeta_ids for i in ids_var)
-        chk_val_var = str_lit.checkbox(
+        var_all_custom = all(i in str_lit.session_state.custom_tarjeta_ids for i in ids_var)
+
+        def make_toggle_custom_var(v_ids):
+          def callback():
+            curr_all = all(i in str_lit.session_state.custom_tarjeta_ids for i in v_ids)
+            if curr_all:
+              for i in v_ids:
+                str_lit.session_state.custom_tarjeta_ids.discard(i)
+            else:
+              for i in v_ids:
+                str_lit.session_state.custom_tarjeta_ids.add(i)
+          return callback
+
+        str_lit.checkbox(
             f"Variante: {var} ({len(ids_var)} espíritus)",
-            value=currently_all_var,
-            key=f"custom_var_{var}"
+            value=var_all_custom,
+            key=f"custom_var_{var}",
+            on_change=make_toggle_custom_var(ids_var)
         )
-        if chk_val_var and not currently_all_var:
-          for i in ids_var:
-            str_lit.session_state.custom_tarjeta_ids.add(i)
-          str_lit.rerun()
-        elif not chk_val_var and currently_all_var:
-          for i in ids_var:
-            str_lit.session_state.custom_tarjeta_ids.discard(i)
-          str_lit.rerun()
 
       str_lit.markdown("---")
       str_lit.markdown("### 🔍 Selección Individual Rápida (Multiselect)")
@@ -1075,32 +1085,27 @@ if os.path.exists(IMG_FOLDER):
         value="MI SELECCIÓN DE ESPÍRITUS",
     )
 
-    if archivos_custom_finales:
-      img_custom_bytes = generar_imagen_coleccion(
-          archivos_custom_finales,
-          str_lit.session_state.seleccionados,
-          str_lit.session_state.dominados,
-          archivos_activos_tarjeta,
-          titulo_personalizado=titulo_custom_input,
-          usar_fondo_app=False,
-          imagen_custom=fondo_custom_usuario,
-          mostrar_marcas=not modo_plantilla,
-          tipo_tarjeta="general",
-      )
-      str_lit.download_button(
-          label=(
-              "📥 Descargar Tarjeta Personalizada ("
-              f"{len(archivos_custom_finales)} espíritus seleccionados)"
-          ),
-          data=img_custom_bytes,
-          file_name="tarjeta_personalizada_espiritus.png",
-          mime="image/png",
-      )
-    else:
-      str_lit.info(
-          "Selecciona al menos una categoría, variante o espíritu en el menú de arriba"
-          " para generar tu tarjeta personalizada."
-      )
+    # El botón de descarga ahora se muestra siempre, sin importar si hay espíritus seleccionados o no
+    img_custom_bytes = generar_imagen_coleccion(
+        archivos_custom_finales,
+        str_lit.session_state.seleccionados,
+        str_lit.session_state.dominados,
+        archivos_activos_tarjeta,
+        titulo_personalizado=titulo_custom_input,
+        usar_fondo_app=False,
+        imagen_custom=fondo_custom_usuario,
+        mostrar_marcas=not modo_plantilla,
+        tipo_tarjeta="general",
+    )
+    str_lit.download_button(
+        label=(
+            "📥 Descargar Tarjeta Personalizada ("
+            f"{len(archivos_custom_finales)} espíritus seleccionados)"
+        ),
+        data=img_custom_bytes,
+        file_name="tarjeta_personalizada_espiritus.png",
+        mime="image/png",
+    )
   else:
     str_lit.info("No hay espíritus disponibles para descargar.")
 else:
