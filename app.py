@@ -499,30 +499,68 @@ if os.path.exists(IMG_FOLDER):
   with str_lit.sidebar:
     str_lit.header("⚙️ Opciones")
 
-    # --- SECCIÓN DE SUPABASE EN BARRA LATERAL ---
+    # --- SECCIÓN DE SUPABASE EN BARRA LATERAL (ACTUALIZADA) ---
     if supabase:
-      with str_lit.expander("☁️ Guardar en la Nube (Supabase)"):
+      with str_lit.expander("☁️ Guardar / Cargar en la Nube"):
         user_cloud = str_lit.text_input("Usuario Fortnite:", key="input_user_sb")
-        if str_lit.button("Guardar en Supabase", use_container_width=True):
-          if user_cloud:
-            try:
-              data_insert = {
-                  "usuario": user_cloud,
-                  "puntuacion": len(str_lit.session_state.seleccionados)
-              }
-              supabase.table("progreso_usuarios").insert(data_insert).execute()
-              str_lit.success("¡Progreso registrado en la nube!")
-            except Exception as err:
-              str_lit.error(f"Error al guardar: {err}")
-          else:
-            str_lit.warning("Escribe un nombre de usuario.")
+        
+        col_c, col_g = str_lit.columns(2)
+        
+        with col_c:
+          if str_lit.button("📥 Cargar", use_container_width=True):
+            if user_cloud:
+              try:
+                res_sb = supabase.table("progreso_usuarios").select("*").eq("usuario", user_cloud).execute()
+                if res_sb.data and len(res_sb.data) > 0:
+                  registro = res_sb.data[0]
+                  if "datos" in registro and registro["datos"]:
+                    # Convertimos las listas guardadas de JSON de vuelta a sets
+                    datos_guardados = registro["datos"]
+                    str_lit.session_state.seleccionados = set(datos_guardados.get("seleccionados", []))
+                    str_lit.session_state.dominados = set(datos_guardados.get("dominados", []))
+                    str_lit.success(f"¡Progreso de '{user_cloud}' cargado!")
+                    str_lit.rerun()
+                  else:
+                    str_lit.warning("El usuario existe pero no tiene detalles guardados.")
+                else:
+                  str_lit.warning("No se encontró ningún registro con ese usuario.")
+              except Exception as err:
+                str_lit.error(f"Error al cargar: {err}")
+            else:
+              str_lit.warning("Escribe un usuario.")
 
-        if str_lit.button("Cargar Líderes", use_container_width=True):
+        with col_g:
+          if str_lit.button("💾 Guardar", use_container_width=True):
+            if user_cloud:
+              try:
+                # Guardamos tanto la puntuación como el estado completo de los sets en formato diccionario serializable
+                payload_datos = {
+                    "seleccionados": list(str_lit.session_state.seleccionados),
+                    "dominados": list(str_lit.session_state.dominados)
+                }
+                data_upsert = {
+                    "usuario": user_cloud,
+                    "puntuacion": len(str_lit.session_state.seleccionados),
+                    "datos": payload_datos
+                }
+                supabase.table("progreso_usuarios").upsert(data_upsert).execute()
+                str_lit.success("¡Progreso guardado en la nube!")
+              except Exception as err:
+                str_lit.error(f"Error al guardar: {err}")
+            else:
+              str_lit.warning("Escribe un usuario.")
+
+        str_lit.markdown("---")
+        if str_lit.button("🏆 Cargar Tabla de Líderes", use_container_width=True):
           try:
-            res_sb = supabase.table("progreso_usuarios").select("*").execute()
-            str_lit.write(res_sb.data)
+            res_sb = supabase.table("progreso_usuarios").select("usuario, puntuacion").order("puntuacion", desc=True).limit(10).execute()
+            if res_sb.data:
+              str_lit.write("### Top Jugadores")
+              str_lit.dataframe(res_sb.data, use_container_width=True)
+            else:
+              str_lit.info("Aún no hay registros.")
           except Exception as err:
-            str_lit.error(f"Error al cargar: {err}")
+            str_lit.error(f"Error al cargar líderes: {err}")
 
     str_lit.markdown("**Modo de Visualización**")
     modo_visualizacion = str_lit.selectbox(
