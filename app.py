@@ -7,6 +7,20 @@ import numpy as np
 import qrcode
 import re
 import streamlit as str_lit
+from supabase import create_client, Client
+
+# --- CONFIGURACIÓN DE PÁGINA (DEBE SER LA PRIMERA LLAMADA DE STREAMLIT) ---
+str_lit.set_page_config(
+    page_title="Tracker de Espíritus", page_icon="✨", layout="wide"
+)
+
+# --- CONEXIÓN A SUPABASE ---
+try:
+    url: str = str_lit.secrets["supabase"]["url"]
+    key: str = str_lit.secrets["supabase"]["key"]
+    supabase: Client = create_client(url, key)
+except Exception as e:
+    supabase = None
 
 # --- CONFIGURACIÓN DE CARPETAS Y ARCHIVOS ---
 IMG_FOLDER = "imagenes"
@@ -18,11 +32,7 @@ CHECK_ICON_PATH = os.path.join(IMG_FOLDER, "check_verde.png")
 CORONA_ICON_PATH = os.path.join(IMG_FOLDER, "corona.png")
 LINKTREE_URL = "https://linktr.ee/deibid_blitz"
 
-str_lit.set_page_config(
-    page_title="Tracker de Espíritus", page_icon="✨", layout="wide"
-)
-
-# --- ESTILOS CSS Y FONDO DE LA APP (BOTONES EN NARANJA) ---
+# --- ESTILOS CSS Y FONDO DE LA APP ---
 if os.path.exists(IMAGEN_FONDO_APP_PATH):
   import base64
 
@@ -502,6 +512,31 @@ if os.path.exists(IMG_FOLDER):
   # --- BARRA LATERAL ---
   with str_lit.sidebar:
     str_lit.header("⚙️ Opciones")
+
+    # --- SECCIÓN DE SUPABASE EN BARRA LATERAL ---
+    if supabase:
+      with str_lit.expander("☁️ Guardar en la Nube (Supabase)"):
+        user_cloud = str_lit.text_input("Usuario Fortnite:", key="input_user_sb")
+        if str_lit.button("Guardar en Supabase", use_container_width=True):
+          if user_cloud:
+            try:
+              data_insert = {
+                  "usuario": user_cloud,
+                  "puntuacion": len(str_lit.session_state.seleccionados)
+              }
+              supabase.table("progreso_usuarios").insert(data_insert).execute()
+              str_lit.success("¡Progreso registrado en la nube!")
+            except Exception as err:
+              str_lit.error(f"Error al guardar: {err}")
+          else:
+            str_lit.warning("Escribe un nombre de usuario.")
+
+        if str_lit.button("Cargar Líderes", use_container_width=True):
+          try:
+            res_sb = supabase.table("progreso_usuarios").select("*").execute()
+            str_lit.write(res_sb.data)
+          except Exception as err:
+            str_lit.error(f"Error al cargar: {err}")
 
     str_lit.markdown("**Modo de Visualización**")
     modo_visualizacion = str_lit.selectbox(
