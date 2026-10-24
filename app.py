@@ -9,7 +9,7 @@ import re
 import streamlit as str_lit
 from supabase import create_client, Client
 
-# --- CONFIGURACIÓN DE PÁGINA (DEBE SER LA PRIMERA LLAMADA DE STREAMLIT) ---
+# --- CONFIGURACIÓN DE PÁGINA ---
 str_lit.set_page_config(
     page_title="Tracker de Espíritus", page_icon="✨", layout="wide"
 )
@@ -513,30 +513,53 @@ if os.path.exists(IMG_FOLDER):
   with str_lit.sidebar:
     str_lit.header("⚙️ Opciones")
 
-    # --- SECCIÓN DE SUPABASE EN BARRA LATERAL ---
+    # --- SECCIÓN DE SUPABASE EN BARRA LATERAL (PULIDA) ---
     if supabase:
-      with str_lit.expander("☁️ Guardar en la Nube (Supabase)"):
-        user_cloud = str_lit.text_input("Usuario Fortnite:", key="input_user_sb")
-        if str_lit.button("Guardar en Supabase", use_container_width=True):
-          if user_cloud:
-            try:
-              data_insert = {
-                  "usuario": user_cloud,
-                  "puntuacion": len(str_lit.session_state.seleccionados)
-              }
-              supabase.table("progreso_usuarios").insert(data_insert).execute()
-              str_lit.success("¡Progreso registrado en la nube!")
-            except Exception as err:
-              str_lit.error(f"Error al guardar: {err}")
-          else:
-            str_lit.warning("Escribe un nombre de usuario.")
+      with str_lit.expander("☁️ Guardar / Cargar en la Nube"):
+        user_cloud = str_lit.text_input("ID o Usuario Fortnite:", key="input_user_sb", placeholder="Ej. id_epic")
+        
+        col_sb1, col_sb2 = str_lit.columns(2)
+        
+        with col_sb1:
+          if str_lit.button("💾 Guardar", use_container_width=True):
+            if user_cloud and user_cloud.strip():
+              try:
+                datos_json = {
+                    "seleccionados": list(str_lit.session_state.seleccionados),
+                    "dominados": list(str_lit.session_state.dominados)
+                }
+                data_upsert = {
+                    "usuario": user_cloud.strip(),
+                    "puntuacion": len(str_lit.session_state.seleccionados),
+                    "datos": datos_json
+                }
+                # Guardar o actualizar registro
+                supabase.table("progreso_usuarios").upsert(data_upsert, on_conflict="usuario").execute()
+                str_lit.success("¡Guardado exitoso!")
+              except Exception as err:
+                str_lit.error(f"Error al guardar: {err}")
+            else:
+              str_lit.warning("Escribe tu ID o usuario.")
 
-        if str_lit.button("Cargar Líderes", use_container_width=True):
-          try:
-            res_sb = supabase.table("progreso_usuarios").select("*").execute()
-            str_lit.write(res_sb.data)
-          except Exception as err:
-            str_lit.error(f"Error al cargar: {err}")
+        with col_sb2:
+          if str_lit.button("📂 Cargar", use_container_width=True):
+            if user_cloud and user_cloud.strip():
+              try:
+                res_sb = supabase.table("progreso_usuarios").select("*").eq("usuario", user_cloud.strip()).execute()
+                if res_sb.data and len(res_sb.data) > 0:
+                  registro = res_sb.data[0]
+                  datos = registro.get("datos", {})
+                  
+                  str_lit.session_state.seleccionados = set(datos.get("seleccionados", []))
+                  str_lit.session_state.dominados = set(datos.get("dominados", []))
+                  str_lit.session_state.mensaje_restauracion = f"¡Progreso de {user_cloud} cargado desde la nube!"
+                  str_lit.rerun()
+                else:
+                  str_lit.error("Usuario no encontrado.")
+              except Exception as err:
+                str_lit.error(f"Error al cargar: {err}")
+            else:
+              str_lit.warning("Escribe un usuario.")
 
     str_lit.markdown("**Modo de Visualización**")
     modo_visualizacion = str_lit.selectbox(
