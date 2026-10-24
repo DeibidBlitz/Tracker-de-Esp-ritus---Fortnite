@@ -7,6 +7,20 @@ import numpy as np
 import qrcode
 import re
 import streamlit as str_lit
+from supabase import create_client, Client
+
+# --- CONFIGURACIÓN DE PÁGINA (DEBE SER LA PRIMERA LLAMADA DE STREAMLIT) ---
+str_lit.set_page_config(
+    page_title="Tracker de Espíritus", page_icon="✨", layout="wide"
+)
+
+# --- CONEXIÓN A SUPABASE ---
+try:
+    url: str = str_lit.secrets["supabase"]["url"]
+    key: str = str_lit.secrets["supabase"]["key"]
+    supabase: Client = create_client(url, key)
+except Exception as e:
+    supabase = None
 
 # --- CONFIGURACIÓN DE CARPETAS Y ARCHIVOS ---
 IMG_FOLDER = "imagenes"
@@ -18,11 +32,7 @@ CHECK_ICON_PATH = os.path.join(IMG_FOLDER, "check_verde.png")
 CORONA_ICON_PATH = os.path.join(IMG_FOLDER, "corona.png")
 LINKTREE_URL = "https://linktr.ee/deibid_blitz"
 
-str_lit.set_page_config(
-    page_title="Tracker de Espíritus", page_icon="✨", layout="wide"
-)
-
-# --- ESTILOS CSS Y FONDO DE LA APP (BOTONES EN NARANJA) ---
+# --- ESTILOS CSS Y FONDO DE LA APP ---
 if os.path.exists(IMAGEN_FONDO_APP_PATH):
   import base64
 
@@ -503,6 +513,31 @@ if os.path.exists(IMG_FOLDER):
   with str_lit.sidebar:
     str_lit.header("⚙️ Opciones")
 
+    # --- SECCIÓN DE SUPABASE EN BARRA LATERAL ---
+    if supabase:
+      with str_lit.expander("☁️ Guardar en la Nube (Supabase)"):
+        user_cloud = str_lit.text_input("Usuario Fortnite:", key="input_user_sb")
+        if str_lit.button("Guardar en Supabase", use_container_width=True):
+          if user_cloud:
+            try:
+              data_insert = {
+                  "usuario": user_cloud,
+                  "puntuacion": len(str_lit.session_state.seleccionados)
+              }
+              supabase.table("progreso_usuarios").insert(data_insert).execute()
+              str_lit.success("¡Progreso registrado en la nube!")
+            except Exception as err:
+              str_lit.error(f"Error al guardar: {err}")
+          else:
+            str_lit.warning("Escribe un nombre de usuario.")
+
+        if str_lit.button("Cargar Líderes", use_container_width=True):
+          try:
+            res_sb = supabase.table("progreso_usuarios").select("*").execute()
+            str_lit.write(res_sb.data)
+          except Exception as err:
+            str_lit.error(f"Error al cargar: {err}")
+
     str_lit.markdown("**Modo de Visualización**")
     modo_visualizacion = str_lit.selectbox(
         "Modo", ["Por Categoría", "Por Variante"], label_visibility="collapsed"
@@ -570,512 +605,4 @@ if os.path.exists(IMG_FOLDER):
             id_esp in str_lit.session_state.seleccionados for id_esp in ids_cat
         )
 
-        def make_toggle_cat_chk(c_ids):
-          def callback():
-            curr_all = all(
-                i in str_lit.session_state.seleccionados for i in c_ids
-            )
-            if curr_all:
-              for i in c_ids:
-                str_lit.session_state.seleccionados.discard(i)
-                str_lit.session_state.dominados.discard(i)
-            else:
-              for i in c_ids:
-                str_lit.session_state.seleccionados.add(i)
-
-          return callback
-
-        str_lit.checkbox(
-            f"{cat}",
-            value=cat_checked_all,
-            key=f"exp_chk_{cat}",
-            on_change=make_toggle_cat_chk(ids_cat),
-        )
-
-    with str_lit.expander("👑 Dominar por categoría"):
-      for cat in categorias_disponibles:
-        ids_cat = [i for i in cat_to_ids[cat] if not es_proximo(i + ".png")]
-        if not ids_cat:
-          continue
-        cat_dom_all = all(
-            id_esp in str_lit.session_state.dominados for id_esp in ids_cat
-        )
-
-        def make_toggle_cat_dom(c_ids):
-          def callback():
-            curr_all = all(i in str_lit.session_state.dominados for i in c_ids)
-            if curr_all:
-              for i in c_ids:
-                str_lit.session_state.dominados.discard(i)
-            else:
-              for i in c_ids:
-                str_lit.session_state.seleccionados.add(i)
-                str_lit.session_state.dominados.add(i)
-
-          return callback
-
-        str_lit.checkbox(
-            f"{cat}",
-            value=cat_dom_all,
-            key=f"exp_dom_{cat}",
-            on_change=make_toggle_cat_dom(ids_cat),
-        )
-
-    str_lit.markdown("---")
-
-    with str_lit.expander("📌 Marcar por variante"):
-      for var in variantes_disponibles:
-        ids_var = [i for i in var_to_ids[var] if not es_proximo(i + ".png")]
-        if not ids_var:
-          continue
-        var_checked_all = all(
-            id_esp in str_lit.session_state.seleccionados for id_esp in ids_var
-        )
-
-        def make_toggle_var_chk(v_ids):
-          def callback():
-            curr_all = all(
-                i in str_lit.session_state.seleccionados for i in v_ids
-            )
-            if curr_all:
-              for i in v_ids:
-                str_lit.session_state.seleccionados.discard(i)
-                str_lit.session_state.dominados.discard(i)
-            else:
-              for i in v_ids:
-                str_lit.session_state.seleccionados.add(i)
-
-          return callback
-
-        str_lit.checkbox(
-            f"{var}",
-            value=var_checked_all,
-            key=f"exp_chk_var_{var}",
-            on_change=make_toggle_var_chk(ids_var),
-        )
-
-    with str_lit.expander("👑 Dominar por variante"):
-      for var in variantes_disponibles:
-        ids_var = [i for i in var_to_ids[var] if not es_proximo(i + ".png")]
-        if not ids_var:
-          continue
-        var_dom_all = all(
-            id_esp in str_lit.session_state.dominados for id_esp in ids_var
-        )
-
-        def make_toggle_var_dom(v_ids):
-          def callback():
-            curr_all = all(i in str_lit.session_state.dominados for i in v_ids)
-            if curr_all:
-              for i in v_ids:
-                str_lit.session_state.dominados.discard(i)
-            else:
-              for i in v_ids:
-                str_lit.session_state.seleccionados.add(i)
-                str_lit.session_state.dominados.add(i)
-
-          return callback
-
-        str_lit.checkbox(
-            f"{var}",
-            value=var_dom_all,
-            key=f"exp_dom_var_{var}",
-            on_change=make_toggle_var_dom(ids_var),
-        )
-
-    str_lit.markdown("---")
-    str_lit.subheader("💾 Respaldo de Progreso")
-    
-    qr_bytes_respaldo = generar_qr_respaldo_bytes(
-        str_lit.session_state.seleccionados,
-        str_lit.session_state.dominados,
-        archivos_activos_tarjeta
-    )
-    str_lit.download_button(
-        label="📥 Descargar QR de Respaldo",
-        data=qr_bytes_respaldo,
-        file_name="qr_respaldo_espiritus.png",
-        mime="image/png",
-        help="Guarda esta imagen para restaurar tu progreso más adelante."
-    )
-
-    str_lit.markdown("")
-    str_lit.subheader("📱 Restaurar Progreso")
-
-    tarjeta_subida = str_lit.file_uploader(
-        "Sube tu QR de respaldo o tarjeta",
-        type=["png", "jpg", "jpeg"],
-        key=f"uploader_{str_lit.session_state.file_uploader_key}",
-    )
-
-    if tarjeta_subida is not None:
-      bytes_actuales = tarjeta_subida.getvalue()
-      if str_lit.session_state.ultimo_bytes_leidos != bytes_actuales:
-        str_lit.session_state.ultimo_bytes_leidos = bytes_actuales
-
-        sel_recuperados, dom_recuperados = leer_progreso_desde_imagen(
-            bytes_actuales, archivos_activos_tarjeta
-        )
-
-        if sel_recuperados is not None:
-          str_lit.session_state.seleccionados = set(sel_recuperados)
-          str_lit.session_state.dominados = set(dom_recuperados)
-          str_lit.session_state.file_uploader_key += 1
-          str_lit.session_state.mensaje_restauracion = (
-              f"Se ha leído correctamente. ¡Progreso restaurado! "
-              f"({len(sel_recuperados)} obtenidos, {len(dom_recuperados)} dominados)"
-          )
-          str_lit.rerun()
-        else:
-          str_lit.session_state.mensaje_restauracion = None
-          str_lit.error(
-              "No se pudo detectar ningún código QR válido de progreso en esta imagen."
-          )
-
-    if str_lit.session_state.mensaje_restauracion:
-      str_lit.success(str_lit.session_state.mensaje_restauracion)
-
-    str_lit.markdown("---")
-    str_lit.info("Marca tus progresos y genera tu tarjeta abajo.")
-
-  # --- CONTENIDO PRINCIPAL ---
-  str_lit.title("✨ Tracker de Espíritus - Fortnite")
-  str_lit.markdown(
-      "Lleva el control de tus espíritus obtenidos y dominados, y genera tu"
-      " tarjeta personalizada."
-  )
-
-  total_espiritus = len(todos_los_ids_activos)
-  obtenidos_count = len(str_lit.session_state.seleccionados)
-  dominados_count = len(str_lit.session_state.dominados)
-
-  col_m1, col_m2, col_m3 = str_lit.columns(3)
-  with col_m1:
-    str_lit.metric(label="Total Registrados", value=total_espiritus)
-  with col_m2:
-    porcentaje_obtenidos = (
-        (obtenidos_count / total_espiritus) * 100 if total_espiritus > 0 else 0
-    )
-    str_lit.metric(
-        label=f"Obtenidos ({porcentaje_obtenidos:.1f}%)", value=obtenidos_count
-    )
-  with col_m3:
-    porcentaje_dominados = (
-        (dominados_count / total_espiritus) * 100 if total_espiritus > 0 else 0
-    )
-    str_lit.metric(
-        label=f"Dominados ({porcentaje_dominados:.1f}%)", value=dominados_count
-    )
-
-  str_lit.markdown("---")
-
-  busqueda_texto = str_lit.text_input(
-      "🔍 Buscar espíritu por nombre",
-      value="",
-      placeholder="Escribe el nombre del espíritu...",
-  )
-
-  str_lit.subheader("📋 Lista de Colección")
-
-  if modo_visualizacion == "Por Categoría":
-    str_lit.markdown("📂 **Selecciona la categoría a visualizar:**")
-    cat_seleccionada_principal = str_lit.selectbox(
-        "Categoría principal",
-        categorias_disponibles,
-        key="select_cat_principal_vista",
-        label_visibility="collapsed"
-    )
-    str_lit.markdown(f"### Categoría: {cat_seleccionada_principal}")
-    archivos_fuente = [
-        f for f in archivos_ordenados if obtener_titulo_categoria(f) == cat_seleccionada_principal
-    ]
-  else:
-    str_lit.markdown("🎨 **Selecciona la variante a visualizar:**")
-    var_seleccionada_principal = str_lit.selectbox(
-        "Variante principal",
-        variantes_disponibles,
-        key="select_var_principal_vista",
-        label_visibility="collapsed"
-    )
-    str_lit.markdown(f"### Variante: {var_seleccionada_principal}")
-    archivos_fuente = [
-        f for f in archivos_ordenados if obtener_variante(f) == var_seleccionada_principal
-    ]
-
-  grupo_filtrado = []
-  for archivo in archivos_fuente:
-    nombre_base = os.path.splitext(archivo)[0]
-    nombre_mostrado = obtener_nombre_limpio(nombre_base)
-    if (
-        busqueda_texto
-        and busqueda_texto.lower() not in nombre_mostrado.lower()
-        and busqueda_texto.lower() not in nombre_base.lower()
-    ):
-      continue
-    grupo_filtrado.append(archivo)
-
-  if not grupo_filtrado:
-    str_lit.info(f"No hay espíritus que coincidan con los filtros actuales.")
-  else:
-    cols = str_lit.columns(5)
-    for i, archivo in enumerate(grupo_filtrado):
-      nombre_base = os.path.splitext(archivo)[0]
-      nombre_mostrado = obtener_nombre_limpio(nombre_base)
-      proximo_lanzamiento = es_proximo(archivo)
-
-      with cols[i % 5]:
-        if proximo_lanzamiento:
-          str_lit.markdown(
-              f"""
-              <div style='text-align: center; opacity: 0.35; margin-bottom: 10px;'>
-                  <img src='app/static/{IMG_FOLDER}/{archivo}' width='100' style='border-radius: 8px;'>
-                  <div style='font-weight: bold; font-size: 13px; color: white;'>{nombre_mostrado}</div>
-                  <div style='font-size: 11px; color: #aaa; margin-top: 2px;'>🔒 Próximamente</div>
-              </div>
-              """,
-              unsafe_allow_html=True,
-          )
-        else:
-          str_lit.image(f"{IMG_FOLDER}/{archivo}", width=100)
-          str_lit.markdown(
-              f"<div style='text-align: center; font-weight: bold; font-size:"
-              f" 13px; margin-bottom: 5px;'>{nombre_mostrado}</div>",
-              unsafe_allow_html=True,
-          )
-
-          is_checked = nombre_base in str_lit.session_state.seleccionados
-          is_dom = nombre_base in str_lit.session_state.dominados
-
-          c_btn1, c_btn2 = str_lit.columns(2)
-
-          with c_btn1:
-            etiqueta_chk = "Obtenido ✅" if is_checked else "Obtener ⬜"
-            if str_lit.button(
-                etiqueta_chk, key=f"chk_{nombre_base}", use_container_width=True, help="Marcar como obtenido"
-            ):
-              str_lit.session_state.mensaje_restauracion = None
-              if is_checked:
-                str_lit.session_state.seleccionados.remove(nombre_base)
-                if nombre_base in str_lit.session_state.dominados:
-                  str_lit.session_state.dominados.remove(nombre_base)
-              else:
-                str_lit.session_state.seleccionados.add(nombre_base)
-              str_lit.rerun()
-
-          with c_btn2:
-            etiqueta_dom = "Dominado 👑" if is_dom else "Dominar ⬜"
-            if is_checked:
-              if str_lit.button(
-                  etiqueta_dom, key=f"dom_{nombre_base}", use_container_width=True, help="Marcar como dominado"
-              ):
-                str_lit.session_state.mensaje_restauracion = None
-                if is_dom:
-                  str_lit.session_state.dominados.remove(nombre_base)
-                else:
-                  str_lit.session_state.dominados.add(nombre_base)
-                str_lit.rerun()
-            else:
-              str_lit.button(
-                  "Bloqueado 🔒",
-                  key=f"dom_{nombre_base}",
-                  disabled=True,
-                  use_container_width=True,
-                  help="Primero debes marcarlo como obtenido"
-              )
-
-  str_lit.markdown("---")
-  str_lit.subheader("🖼️ Generar Tarjetas de Colección")
-
-  modo_plantilla = str_lit.checkbox(
-      "🖨️ Modo Plantilla Limpia (Ocultar marcados, coronas y contadores de progreso)",
-      value=False,
-      help="Activa esta opción para exportar las tarjetas en blanco, sin mostrar qué espíritus tienes obtenidos o dominados."
-  )
-
-  usuario_id_input = str_lit.text_input(
-      "🆔 (Opcional) Tu ID o Nombre de Usuario para mostrar en las tarjetas",
-      value="",
-      placeholder="Ej. id_epic",
-  )
-
-  fondo_custom_usuario = str_lit.file_uploader(
-      "🎨 (Opcional) Subir imagen de fondo personalizada para la tarjeta",
-      type=["png", "jpg", "jpeg", "webp"],
-      key="fondo_personalizado_uploader",
-  )
-
-  if archivos_ordenados:
-    img_bytes = generar_imagen_coleccion(
-        archivos_activos_tarjeta,
-        str_lit.session_state.seleccionados,
-        str_lit.session_state.dominados,
-        archivos_activos_tarjeta,
-        usar_fondo_app=False,
-        imagen_custom=fondo_custom_usuario,
-        mostrar_marcas=not modo_plantilla,
-        tipo_tarjeta="general",
-        usuario_id=usuario_id_input,
-    )
-    str_lit.download_button(
-        label=(
-            "📥 Crear y Descargar Tarjeta General (Con QR de Linktree"
-            " integrado)"
-        ),
-        data=img_bytes,
-        file_name="catalogo_espiritus.png",
-        mime="image/png",
-    )
-
-    str_lit.markdown("---")
-    
-    # --- EXPANSOR DE TARJETAS POR CATEGORÍA ---
-    with str_lit.expander("📁 Tarjetas por Categoría"):
-      str_lit.markdown(
-          "Despliega y genera únicamente la tarjeta de la categoría que"
-          " necesites para optimizar el rendimiento:"
-      )
-      
-      for cat in categorias_disponibles:
-        archivos_cat = [
-            f for f in archivos_activos_tarjeta if obtener_titulo_categoria(f) == cat
-        ]
-        if archivos_cat:
-          with str_lit.container():
-            col_info, col_btn = str_lit.columns([2, 1])
-            with col_info:
-              str_lit.markdown(f"**Categoría: {cat}** ({len(archivos_cat)} espíritus)")
-            
-            with col_btn:
-              if str_lit.button(f"📥 Generar {cat}", key=f"gen_btn_cat_{cat}"):
-                with str_lit.spinner(f"Generando tarjeta de {cat}..."):
-                  img_cat_bytes = generar_imagen_coleccion(
-                      archivos_cat,
-                      str_lit.session_state.seleccionados,
-                      str_lit.session_state.dominados,
-                      archivos_activos_tarjeta,
-                      titulo_personalizado=f"CATEGORÍA: {cat.upper()}",
-                      usar_fondo_app=False,
-                      imagen_custom=fondo_custom_usuario,
-                      mostrar_marcas=not modo_plantilla,
-                      tipo_tarjeta="categoria",
-                      usuario_id=usuario_id_input,
-                  )
-                str_lit.download_button(
-                    label=f"💾 Descargar {cat}.png",
-                    data=img_cat_bytes,
-                    file_name=f"catalogo_{cat.lower().replace(' ', '_')}.png",
-                    mime="image/png",
-                    key=f"dl_cat_file_{cat}",
-                )
-          str_lit.markdown("---")
-
-    # --- EXPANSOR DE TARJETAS POR VARIANTE ---
-    with str_lit.expander("🎨 Tarjetas por Variante"):
-      str_lit.markdown(
-          "Despliega y genera únicamente la tarjeta de la variante que"
-          " necesites (Ej. Normal, Dorado, Hacker, etc.):"
-      )
-      
-      for var in variantes_disponibles:
-        archivos_var = [
-            f for f in archivos_activos_tarjeta if obtener_variante(f) == var
-        ]
-        if archivos_var:
-          with str_lit.container():
-            col_info_v, col_btn_v = str_lit.columns([2, 1])
-            with col_info_v:
-              str_lit.markdown(f"**Variante: {var}** ({len(archivos_var)} espíritus)")
-            
-            with col_btn_v:
-              if str_lit.button(f"📥 Generar {var}", key=f"gen_btn_var_{var}"):
-                with str_lit.spinner(f"Generando tarjeta de {var}..."):
-                  img_var_bytes = generar_imagen_coleccion(
-                      archivos_var,
-                      str_lit.session_state.seleccionados,
-                      str_lit.session_state.dominados,
-                      archivos_activos_tarjeta,
-                      titulo_personalizado=f"VARIANTE: {var.upper()}",
-                      usar_fondo_app=False,
-                      imagen_custom=fondo_custom_usuario,
-                      mostrar_marcas=not modo_plantilla,
-                      tipo_tarjeta="variante",
-                      usuario_id=usuario_id_input,
-                  )
-                str_lit.download_button(
-                    label=f"💾 Descargar {var}.png",
-                    data=img_var_bytes,
-                    file_name=f"catalogo_variante_{var.lower().replace(' ', '_')}.png",
-                    mime="image/png",
-                    key=f"dl_var_file_{var}",
-                )
-            str_lit.markdown("---")
-
-    str_lit.markdown("#### ✨ Crear Tarjeta Personalizada (Múltiples Categorías/Variantes)")
-
-    # --- MENÚS PLEGABLES PARA SELECCIONAR CATEGORÍAS Y VARIANTES ---
-    with str_lit.expander(
-        "🛠 Seleccionar categorías y variantes para tarjeta a medida"
-    ):
-      str_lit.markdown(
-          "Selecciona las categorías y/o variantes que desees incluir en tu tarjeta personalizada:"
-      )
-
-      str_lit.markdown("### 📁 Seleccionar por Categoría")
-      categorias_custom_seleccionadas = []
-      for cat in categorias_disponibles:
-        if str_lit.checkbox(f"Categoría: {cat}", key=f"custom_cat_{cat}"):
-          categorias_custom_seleccionadas.append(cat)
-
-      str_lit.markdown("---")
-      str_lit.markdown("### 🎨 Seleccionar por Variante")
-      variantes_custom_seleccionadas = []
-      for var in variantes_disponibles:
-        if str_lit.checkbox(f"Variante: {var}", key=f"custom_var_{var}"):
-          variantes_custom_seleccionadas.append(var)
-
-    # Recopilar los IDs de espíritus basados estrictamente en las categorías y variantes marcadas
-    ids_custom_dinamicos = set()
-    for archivo in archivos_activos_tarjeta:
-      f_id = os.path.splitext(archivo)[0]
-      cat_actual = obtener_titulo_categoria(archivo)
-      var_actual = obtener_variante(archivo)
-      if cat_actual in categorias_custom_seleccionadas or var_actual in variantes_custom_seleccionadas:
-        ids_custom_dinamicos.add(f_id)
-
-    archivos_custom_finales = [
-        f
-        for f in archivos_activos_tarjeta
-        if os.path.splitext(f)[0] in ids_custom_dinamicos
-    ]
-
-    titulo_custom_input = str_lit.text_input(
-        "🏷️ Título para la tarjeta personalizada",
-        value="MI SELECCIÓN DE ESPÍRITUS",
-    )
-
-    # El botón de descarga ahora genera la tarjeta basándose en las categorías/variantes elegidas
-    img_custom_bytes = generar_imagen_coleccion(
-        archivos_custom_finales,
-        str_lit.session_state.seleccionados,
-        str_lit.session_state.dominados,
-        archivos_activos_tarjeta,
-        titulo_personalizado=titulo_custom_input,
-        usar_fondo_app=False,
-        imagen_custom=fondo_custom_usuario,
-        mostrar_marcas=not modo_plantilla,
-        tipo_tarjeta="general",
-        usuario_id=usuario_id_input,
-    )
-    str_lit.download_button(
-        label=(
-            "📥 Descargar Tarjeta Personalizada ("
-            f"{len(archivos_custom_finales)} espíritus seleccionados)"
-        ),
-        data=img_custom_bytes,
-        file_name="tarjeta_personalizada_espiritus.png",
-        mime="image/png",
-    )
-  else:
-    str_lit.info("No hay espíritus disponibles para descargar.")
-else:
-  str_lit.warning("Aún no he encontrado la carpeta de imágenes.")
+        def make_toggle_cat_chk(c_ids
