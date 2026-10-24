@@ -7,20 +7,6 @@ import numpy as np
 import qrcode
 import re
 import streamlit as str_lit
-from supabase import create_client, Client
-
-# --- CONFIGURACIÓN DE PÁGINA (DEBE SER LA PRIMERA LLAMADA DE STREAMLIT) ---
-str_lit.set_page_config(
-    page_title="Tracker de Espíritus", page_icon="✨", layout="wide"
-)
-
-# --- CONEXIÓN A SUPABASE ---
-try:
-    url: str = str_lit.secrets["supabase"]["url"]
-    key: str = str_lit.secrets["supabase"]["key"]
-    supabase: Client = create_client(url, key)
-except Exception as e:
-    supabase = None
 
 # --- CONFIGURACIÓN DE CARPETAS Y ARCHIVOS ---
 IMG_FOLDER = "imagenes"
@@ -32,7 +18,11 @@ CHECK_ICON_PATH = os.path.join(IMG_FOLDER, "check_verde.png")
 CORONA_ICON_PATH = os.path.join(IMG_FOLDER, "corona.png")
 LINKTREE_URL = "https://linktr.ee/deibid_blitz"
 
-# --- ESTILOS CSS Y FONDO DE LA APP ---
+str_lit.set_page_config(
+    page_title="Tracker de Espíritus", page_icon="✨", layout="wide"
+)
+
+# --- ESTILOS CSS Y FONDO DE LA APP (BOTONES EN NARANJA) ---
 if os.path.exists(IMAGEN_FONDO_APP_PATH):
   import base64
 
@@ -214,6 +204,7 @@ def generar_imagen_coleccion(
     imagen_custom=None,
     mostrar_marcas=True,
     tipo_tarjeta="general",
+    usuario_id=None,
 ):
   if not lista_ordenada_archivos:
     img_vacia = Image.new("RGBA", (400, 150), color=(20, 20, 20, 255))
@@ -305,10 +296,12 @@ def generar_imagen_coleccion(
   ruta_fuente = os.path.join(IMG_FOLDER, "BURBANK.ttf")
   try:
     font_principal = ImageFont.truetype(ruta_fuente, 28)
+    font_id = ImageFont.truetype(ruta_fuente, 20)
     font_contador = ImageFont.truetype(ruta_fuente, 22)
     font_qr_msg = ImageFont.truetype(ruta_fuente, 13)
   except IOError:
     font_principal = ImageFont.load_default()
+    font_id = ImageFont.load_default()
     font_contador = ImageFont.load_default()
     font_qr_msg = ImageFont.load_default()
 
@@ -330,6 +323,8 @@ def generar_imagen_coleccion(
       if titulo_personalizado
       else "MI COLECCIÓN DE ESPÍRITUS"
   )
+
+  # Dibujar título principal a la izquierda
   d.text(
       (padding_lateral + 17, 30),
       texto_titulo,
@@ -342,6 +337,15 @@ def generar_imagen_coleccion(
       fill=(255, 255, 255, 255),
       font=font_principal,
   )
+
+  # Dibujar ID centrado en medio si se proporciona
+  if usuario_id and usuario_id.strip():
+    texto_id_completo = f"ID: {usuario_id.strip()}"
+    bbox_id = d.textbbox((0, 0), texto_id_completo, font=font_id)
+    w_id = bbox_id[2] - bbox_id[0]
+    pos_id_x = (ancho_total - w_id) // 2
+    d.text((pos_id_x + 1, 32), texto_id_completo, fill=(0, 0, 0, 255), font=font_id)
+    d.text((pos_id_x, 31), texto_id_completo, fill=(200, 220, 255, 255), font=font_id)
 
   total_items = len(lista_ordenada_archivos)
   
@@ -498,70 +502,6 @@ if os.path.exists(IMG_FOLDER):
   # --- BARRA LATERAL ---
   with str_lit.sidebar:
     str_lit.header("⚙️ Opciones")
-
-    # --- SECCIÓN DE SUPABASE EN BARRA LATERAL (ACTUALIZADA) ---
-    if supabase:
-      with str_lit.expander("☁️ Guardar / Cargar en la Nube"):
-        user_cloud = str_lit.text_input("Usuario Fortnite:", key="input_user_sb")
-        
-        col_c, col_g = str_lit.columns(2)
-        
-        with col_c:
-          if str_lit.button("📥 Cargar", use_container_width=True):
-            if user_cloud:
-              try:
-                res_sb = supabase.table("progreso_usuarios").select("*").eq("usuario", user_cloud).execute()
-                if res_sb.data and len(res_sb.data) > 0:
-                  registro = res_sb.data[0]
-                  if "datos" in registro and registro["datos"]:
-                    # Convertimos las listas guardadas de JSON de vuelta a sets
-                    datos_guardados = registro["datos"]
-                    str_lit.session_state.seleccionados = set(datos_guardados.get("seleccionados", []))
-                    str_lit.session_state.dominados = set(datos_guardados.get("dominados", []))
-                    str_lit.success(f"¡Progreso de '{user_cloud}' cargado!")
-                    str_lit.rerun()
-                  else:
-                    str_lit.warning("El usuario existe pero no tiene detalles guardados.")
-                else:
-                  str_lit.warning("No se encontró ningún registro con ese usuario.")
-              except Exception as err:
-                str_lit.error(f"Error al cargar: {err}")
-            else:
-              str_lit.warning("Escribe un usuario.")
-
-        with col_g:
-            if str_lit.button("💾 Guardar", use_container_width=True):
-                if user_cloud:
-                    try:
-                        # Guardamos el estado completo de los sets
-                        payload_datos = {
-                            "seleccionados": list(str_lit.session_state.seleccionados),
-                            "dominados": list(str_lit.session_state.dominados)
-                        }
-                        data_upsert = {
-                            "usuario": user_cloud,
-                            # 👑 AQUÍ CAMBIAMOS PARA QUE LA PUNTUACIÓN SEA EL TOTAL DE DOMINADOS
-                            "puntuacion": len(str_lit.session_state.dominados),
-                            "datos": payload_datos
-                        }
-                        supabase.table("progreso_usuarios").upsert(data_upsert).execute()
-                        str_lit.success("¡Progreso guardado en la nube!")
-                    except Exception as err:
-                        str_lit.error(f"Error al guardar: {err}")
-                else:
-                    str_lit.warning("Escribe un usuario.")
-
-        str_lit.markdown("---")
-        if str_lit.button("🏆 Cargar Tabla de Líderes", use_container_width=True):
-          try:
-            res_sb = supabase.table("progreso_usuarios").select("usuario, puntuacion").order("puntuacion", desc=True).limit(10).execute()
-            if res_sb.data:
-              str_lit.write("### Top Jugadores")
-              str_lit.dataframe(res_sb.data, use_container_width=True)
-            else:
-              str_lit.info("Aún no hay registros.")
-          except Exception as err:
-            str_lit.error(f"Error al cargar líderes: {err}")
 
     str_lit.markdown("**Modo de Visualización**")
     modo_visualizacion = str_lit.selectbox(
@@ -952,6 +892,12 @@ if os.path.exists(IMG_FOLDER):
       help="Activa esta opción para exportar las tarjetas en blanco, sin mostrar qué espíritus tienes obtenidos o dominados."
   )
 
+  usuario_id_input = str_lit.text_input(
+      "🆔 (Opcional) Tu ID o Nombre de Usuario para mostrar en las tarjetas",
+      value="",
+      placeholder="Ej. id_epic",
+  )
+
   fondo_custom_usuario = str_lit.file_uploader(
       "🎨 (Opcional) Subir imagen de fondo personalizada para la tarjeta",
       type=["png", "jpg", "jpeg", "webp"],
@@ -968,6 +914,7 @@ if os.path.exists(IMG_FOLDER):
         imagen_custom=fondo_custom_usuario,
         mostrar_marcas=not modo_plantilla,
         tipo_tarjeta="general",
+        usuario_id=usuario_id_input,
     )
     str_lit.download_button(
         label=(
@@ -1011,6 +958,7 @@ if os.path.exists(IMG_FOLDER):
                       imagen_custom=fondo_custom_usuario,
                       mostrar_marcas=not modo_plantilla,
                       tipo_tarjeta="categoria",
+                      usuario_id=usuario_id_input,
                   )
                 str_lit.download_button(
                     label=f"💾 Descargar {cat}.png",
@@ -1051,6 +999,7 @@ if os.path.exists(IMG_FOLDER):
                       imagen_custom=fondo_custom_usuario,
                       mostrar_marcas=not modo_plantilla,
                       tipo_tarjeta="variante",
+                      usuario_id=usuario_id_input,
                   )
                 str_lit.download_button(
                     label=f"💾 Descargar {var}.png",
@@ -1115,6 +1064,7 @@ if os.path.exists(IMG_FOLDER):
         imagen_custom=fondo_custom_usuario,
         mostrar_marcas=not modo_plantilla,
         tipo_tarjeta="general",
+        usuario_id=usuario_id_input,
     )
     str_lit.download_button(
         label=(
