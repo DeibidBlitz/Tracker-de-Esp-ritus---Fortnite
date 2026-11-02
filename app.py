@@ -103,9 +103,17 @@ if not os.path.exists(IMG_FOLDER):
   os.makedirs(IMG_FOLDER)
 
 
-# --- FUNCIONES AUXILIARES ---
+# --- FUNCIONES AUXILIARES DE ORDENAMIENTO Y NOMBRES ---
 def es_proximo(nombre_archivo):
   return "proximo" in nombre_archivo.lower() or "prox_" in nombre_archivo.lower()
+
+
+def obtener_numero_orden(nombre_archivo):
+  # Extrae el número del archivo (ej. de "#1 Bananin Huesudo.png" extrae 1)[cite: 7]
+  match = re.search(r'#?(\d+)', nombre_archivo)
+  if match:
+    return int(match.group(1))
+  return 9999
 
 
 def obtener_titulo_categoria(nombre_archivo):
@@ -134,13 +142,11 @@ def obtener_variante(nombre_archivo):
 
 
 def obtener_nombre_limpio(nombre_base):
-  categoria = obtener_titulo_categoria(nombre_base + ".png")
-  variante = obtener_variante(nombre_base + ".png")
-  
-  if variante == "Normal":
-    return categoria
-  else:
-    return f"{categoria} {variante}"
+  # Elimina el número y símbolos iniciales (ej. "#1 Bananin Huesudo" -> "Bananin Huesudo")[cite: 7]
+  limpio = re.sub(r'^#?\d+\s*[-_]?\s*', '', nombre_base).strip()
+  if limpio:
+    return limpio.title()
+  return nombre_base
 
 
 def generar_qr_respaldo_bytes(seleccionados, dominados, lista_todos_archivos):
@@ -475,14 +481,20 @@ if os.path.exists(IMG_FOLDER):
       "fondo_categoria.png",
       "fondo_variante.png",
   }
-  archivos_crudos = sorted([
-      f
-      for f in os.listdir(IMG_FOLDER)
-      if f.lower().endswith(".png")
-      and not f.startswith("num_")
-      and not f.lower().startswith("fondo_")
-      and f.lower() not in archivos_ignorar
-  ])
+  
+  # Cargar archivos ordenados estrictamente por su número extraído del nombre (ej. #1, #2...)[cite: 7]
+  archivos_crudos = sorted(
+      [
+          f
+          for f in os.listdir(IMG_FOLDER)
+          if f.lower().endswith(".png")
+          and not f.startswith("num_")
+          and not f.lower().startswith("fondo_")
+          and f.lower() not in archivos_ignorar
+      ],
+      key=obtener_numero_orden
+  )
+  
   archivos_ordenados = list(archivos_crudos)
   
   archivos_activos_tarjeta = [f for f in archivos_ordenados if not es_proximo(f)]
@@ -513,7 +525,7 @@ if os.path.exists(IMG_FOLDER):
   with str_lit.sidebar:
     str_lit.header("⚙️ Opciones")
 
-    # --- SECCIÓN DE SUPABASE EN BARRA LATERAL (PULIDA) ---
+    # --- SECCIÓN DE SUPABASE EN BARRA LATERAL ---
     if supabase:
       with str_lit.expander("☁️ Guardar / Cargar en la Nube"):
         user_cloud = str_lit.text_input("ID o Usuario Fortnite:", key="input_user_sb", placeholder="Ej. id_epic")
@@ -533,7 +545,6 @@ if os.path.exists(IMG_FOLDER):
                     "puntuacion": len(str_lit.session_state.seleccionados),
                     "datos": datos_json
                 }
-                # Guardar o actualizar registro
                 supabase.table("progreso_usuarios").upsert(data_upsert, on_conflict="usuario").execute()
                 str_lit.success("¡Guardado exitoso!")
               except Exception as err:
@@ -953,7 +964,7 @@ if os.path.exists(IMG_FOLDER):
   usuario_id_input = str_lit.text_input(
       "🆔 (Opcional) Tu ID o Nombre de Usuario para mostrar en las tarjetas",
       value="",
-      placeholder="Ej. id_epic",
+      placeholder="id_epic",
   )
 
   fondo_custom_usuario = str_lit.file_uploader(
