@@ -103,29 +103,43 @@ if not os.path.exists(IMG_FOLDER):
   os.makedirs(IMG_FOLDER)
 
 
-# --- FUNCIONES AUXILIARES DE ORDENAMIENTO Y NOMBRES ---
+# --- FUNCIONES AUXILIARES ---
 def es_proximo(nombre_archivo):
   return "proximo" in nombre_archivo.lower() or "prox_" in nombre_archivo.lower()
 
 
-def obtener_numero_orden(nombre_archivo):
-  # Extrae el número del archivo (ej. de "#1 Bananin Huesudo.png" extrae 1)[cite: 7]
+def extraer_numero_orden(nombre_archivo):
   match = re.search(r'#?(\d+)', nombre_archivo)
   if match:
     return int(match.group(1))
   return 9999
 
 
+def limpiar_nombre_archivo(nombre_archivo):
+  """Quita la extensión y limpia caracteres extra."""
+  nombre_sin_ext = os.path.splitext(nombre_archivo)[0]
+  return nombre_sin_ext
+
+
 def obtener_titulo_categoria(nombre_archivo):
-  partes = nombre_archivo.split("-")
+  nombre_limpio = limpiar_nombre_archivo(nombre_archivo)
+  # Quitar el número inicial si lo tiene (ej. #1-Bananin -> Bananin)
+  nombre_sin_num = re.sub(r'^#?\d+\s*-?\s*', '', nombre_limpio)
+  partes = nombre_sin_num.split("-")
   if len(partes) >= 2:
     return partes[1].replace("_", " ").title()
-  return "General"
+  # Si no tiene guion, intentamos separar por espacios o guion bajo quitando variantes conocidas
+  cat_base = partes[0].replace("_", " ")
+  for var in ["Afortunado", "Dorado", "Hacker", "Cazarecompensas", "Patito", "Dulce", "Truco"]:
+    cat_base = re.sub(re.escape(var), '', cat_base, flags=re.IGNORECASE).strip()
+  return cat_base.title() if cat_base else "General"
 
 
 def obtener_variante(nombre_archivo):
-  nombre_base = os.path.splitext(nombre_archivo)[0].lower()
-  if "cazarecompensas" in nombre_base:
+  nombre_base = limpiar_nombre_archivo(nombre_archivo).lower()
+  if "afortunado" in nombre_base:
+    return "Afortunado"
+  elif "cazarecompensas" in nombre_base:
     return "Cazarecompensas"
   elif "dorado" in nombre_base:
     return "Dorado"
@@ -142,20 +156,22 @@ def obtener_variante(nombre_archivo):
 
 
 def obtener_nombre_limpio(nombre_base):
-  # Elimina el número y símbolos iniciales (ej. "#1 Bananin Huesudo" -> "Bananin Huesudo")[cite: 7]
-  limpio = re.sub(r'^#?\d+\s*[-_]?\s*', '', nombre_base).strip()
-  if limpio:
-    return limpio.title()
-  return nombre_base
+  categoria = obtener_titulo_categoria(nombre_base + ".png")
+  variante = obtener_variante(nombre_base + ".png")
+  
+  if variante == "Normal":
+    return categoria
+  else:
+    return f"{categoria} {variante}"
 
 
 def generar_qr_respaldo_bytes(seleccionados, dominados, lista_todos_archivos):
   bin_sel = "".join(
-      "1" if os.path.splitext(f)[0] in seleccionados else "0"
+      "1" if limpiar_nombre_archivo(f) in seleccionados else "0"
       for f in lista_todos_archivos
   )
   bin_dom = "".join(
-      "1" if os.path.splitext(f)[0] in dominados else "0"
+      "1" if limpiar_nombre_archivo(f) in dominados else "0"
       for f in lista_todos_archivos
   )
 
@@ -195,7 +211,7 @@ def leer_progreso_desde_imagen(imagen_bytes, lista_todos_archivos):
       bin_sel = bin(val_sel)[2:].zfill(total_archivos)
       bin_dom = bin(val_dom)[2:].zfill(total_archivos)
 
-      todos_ids = [os.path.splitext(f)[0] for f in lista_todos_archivos]
+      todos_ids = [limpiar_nombre_archivo(f) for f in lista_todos_archivos]
 
       sel_recuperados = [
           todos_ids[i] for i, bit in enumerate(bin_sel) if bit == "1"
@@ -273,7 +289,7 @@ def generar_imagen_coleccion(
   for i in range(len(lista_ordenada_archivos)):
     x = padding_lateral + (i % columnas) * ancho_celda + 10
     y = padding_superior + (i // columnas) * alto_celda + 10
-    nombre_base = os.path.splitext(lista_ordenada_archivos[i])[0]
+    nombre_base = limpiar_nombre_archivo(lista_ordenada_archivos[i])
     is_dom = nombre_base in dominados if mostrar_marcas else False
 
     if is_dom:
@@ -340,7 +356,6 @@ def generar_imagen_coleccion(
       else "MI COLECCIÓN DE ESPÍRITUS"
   )
 
-  # Dibujar título principal a la izquierda
   d.text(
       (padding_lateral + 17, 30),
       texto_titulo,
@@ -354,7 +369,6 @@ def generar_imagen_coleccion(
       font=font_principal,
   )
 
-  # Dibujar ID centrado en medio si se proporciona
   if usuario_id and usuario_id.strip():
     texto_id_completo = f"ID: {usuario_id.strip()}"
     bbox_id = d.textbbox((0, 0), texto_id_completo, font=font_id)
@@ -369,10 +383,10 @@ def generar_imagen_coleccion(
     obtenidos_totales = sum(
         1
         for f in lista_ordenada_archivos
-        if os.path.splitext(f)[0] in seleccionados
+        if limpiar_nombre_archivo(f) in seleccionados
     )
     dominados_totales = sum(
-        1 for f in lista_ordenada_archivos if os.path.splitext(f)[0] in dominados
+        1 for f in lista_ordenada_archivos if limpiar_nombre_archivo(f) in dominados
     )
 
     pos_x_base = ancho_total - padding_lateral - 215
@@ -442,7 +456,7 @@ def generar_imagen_coleccion(
     img_final.paste(img_espiritu, (x, y), img_espiritu)
 
     if mostrar_marcas:
-      nombre_base = os.path.splitext(archivo)[0]
+      nombre_base = limpiar_nombre_archivo(archivo)
       is_checked = nombre_base in seleccionados
       is_dom = nombre_base in dominados
 
@@ -481,25 +495,20 @@ if os.path.exists(IMG_FOLDER):
       "fondo_categoria.png",
       "fondo_variante.png",
   }
-  
-  # Cargar archivos ordenados estrictamente por su número extraído del nombre (ej. #1, #2...)[cite: 7]
-  archivos_crudos = sorted(
-      [
-          f
-          for f in os.listdir(IMG_FOLDER)
-          if f.lower().endswith(".png")
-          and not f.startswith("num_")
-          and not f.lower().startswith("fondo_")
-          and f.lower() not in archivos_ignorar
-      ],
-      key=obtener_numero_orden
-  )
+  archivos_crudos = sorted([
+      f
+      for f in os.listdir(IMG_FOLDER)
+      if f.lower().endswith((".png", ".jpg", ".jpeg"))
+      and not f.startswith("num_")
+      and not f.lower().startswith("fondo_")
+      and f.lower() not in archivos_ignorar
+  ], key=extraer_numero_orden)
   
   archivos_ordenados = list(archivos_crudos)
   
   archivos_activos_tarjeta = [f for f in archivos_ordenados if not es_proximo(f)]
-  todos_los_ids = [os.path.splitext(f)[0] for f in archivos_ordenados]
-  todos_los_ids_activos = [os.path.splitext(f)[0] for f in archivos_activos_tarjeta]
+  todos_los_ids = [limpiar_nombre_archivo(f) for f in archivos_ordenados]
+  todos_los_ids_activos = [limpiar_nombre_archivo(f) for f in archivos_activos_tarjeta]
 
   categorias_disponibles = []
   for f in archivos_crudos:
@@ -508,12 +517,12 @@ if os.path.exists(IMG_FOLDER):
       categorias_disponibles.append(cat)
 
   cat_to_ids = {}
-  variantes_disponibles = ["Normal", "Dorado", "Hacker", "Hacker de Botín", "Cazarecompensas", "Dulce o Truco", "Patito"]
+  variantes_disponibles = ["Normal", "Afortunado", "Dorado", "Hacker", "Hacker de Botín", "Cazarecompensas", "Dulce o Truco", "Patito"]
   var_to_ids = {v: [] for v in variantes_disponibles}
 
   for f in archivos_crudos:
     cat = obtener_titulo_categoria(f)
-    f_id = os.path.splitext(f)[0]
+    f_id = limpiar_nombre_archivo(f)
     if cat not in cat_to_ids:
       cat_to_ids[cat] = []
     cat_to_ids[cat].append(f_id)
@@ -525,7 +534,6 @@ if os.path.exists(IMG_FOLDER):
   with str_lit.sidebar:
     str_lit.header("⚙️ Opciones")
 
-    # --- SECCIÓN DE SUPABASE EN BARRA LATERAL ---
     if supabase:
       with str_lit.expander("☁️ Guardar / Cargar en la Nube"):
         user_cloud = str_lit.text_input("ID o Usuario Fortnite:", key="input_user_sb", placeholder="Ej. id_epic")
@@ -873,7 +881,7 @@ if os.path.exists(IMG_FOLDER):
 
   grupo_filtrado = []
   for archivo in archivos_fuente:
-    nombre_base = os.path.splitext(archivo)[0]
+    nombre_base = limpiar_nombre_archivo(archivo)
     nombre_mostrado = obtener_nombre_limpio(nombre_base)
     if (
         busqueda_texto
@@ -888,7 +896,7 @@ if os.path.exists(IMG_FOLDER):
   else:
     cols = str_lit.columns(5)
     for i, archivo in enumerate(grupo_filtrado):
-      nombre_base = os.path.splitext(archivo)[0]
+      nombre_base = limpiar_nombre_archivo(archivo)
       nombre_mostrado = obtener_nombre_limpio(nombre_base)
       proximo_lanzamiento = es_proximo(archivo)
 
@@ -964,7 +972,7 @@ if os.path.exists(IMG_FOLDER):
   usuario_id_input = str_lit.text_input(
       "🆔 (Opcional) Tu ID o Nombre de Usuario para mostrar en las tarjetas",
       value="",
-      placeholder="id_epic",
+      placeholder="Ej. id_epic",
   )
 
   fondo_custom_usuario = str_lit.file_uploader(
@@ -1042,7 +1050,7 @@ if os.path.exists(IMG_FOLDER):
     with str_lit.expander("🎨 Tarjetas por Variante"):
       str_lit.markdown(
           "Despliega y genera únicamente la tarjeta de la variante que"
-          " necesites (Ej. Normal, Dorado, Hacker, etc.):"
+          " necesites (Ej. Normal, Afortunado, Dorado, etc.):"
       )
       
       for var in variantes_disponibles:
@@ -1102,10 +1110,9 @@ if os.path.exists(IMG_FOLDER):
         if str_lit.checkbox(f"Variante: {var}", key=f"custom_var_{var}"):
           variantes_custom_seleccionadas.append(var)
 
-    # Recopilar los IDs de espíritus basados estrictamente en las categorías y variantes marcadas
     ids_custom_dinamicos = set()
     for archivo in archivos_activos_tarjeta:
-      f_id = os.path.splitext(archivo)[0]
+      f_id = limpiar_nombre_archivo(archivo)
       cat_actual = obtener_titulo_categoria(archivo)
       var_actual = obtener_variante(archivo)
       if cat_actual in categorias_custom_seleccionadas or var_actual in variantes_custom_seleccionadas:
@@ -1114,7 +1121,7 @@ if os.path.exists(IMG_FOLDER):
     archivos_custom_finales = [
         f
         for f in archivos_activos_tarjeta
-        if os.path.splitext(f)[0] in ids_custom_dinamicos
+        if limpiar_nombre_archivo(f) in ids_custom_dinamicos
     ]
 
     titulo_custom_input = str_lit.text_input(
@@ -1122,7 +1129,6 @@ if os.path.exists(IMG_FOLDER):
         value="MI SELECCIÓN DE ESPÍRITUS",
     )
 
-    # El botón de descarga ahora genera la tarjeta basándose en las categorías/variantes elegidas
     img_custom_bytes = generar_imagen_coleccion(
         archivos_custom_finales,
         str_lit.session_state.seleccionados,
