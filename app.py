@@ -128,22 +128,16 @@ def obtener_titulo_categoria(nombre_archivo):
     return partes[1].replace("_", " ").title()
   
   cat_base = partes[0].replace("_", " ")
-  # Limpiar variantes conocidas para que no ensucien la categoría base si no llevan guion
-  for var in ["Afortunado", "Dorado", "Hacker"]:
-    cat_base = re.sub(re.escape(var), '', cat_base, flags=re.IGNORECASE).strip()
+  # Limpiar la variante afortunado para que no ensucie la categoría base si no lleva guion
+  cat_base = re.sub(r'afortunado', '', cat_base, flags=re.IGNORECASE).strip()
   return cat_base.title() if cat_base else "General"
 
 
 def obtener_variante(nombre_archivo):
+  """Solo reconoce las variantes Normal y Afortunado."""
   nombre_base = limpiar_nombre_archivo(nombre_archivo).lower()
   if "afortunado" in nombre_base:
     return "Afortunado"
-  elif "dorado" in nombre_base:
-    return "Dorado"
-  elif "hacker" in nombre_base and ("botin" in nombre_base or "botín" in nombre_base):
-    return "Hacker de Botín"
-  elif "hacker" in nombre_base:
-    return "Hacker"
   else:
     return "Normal"
 
@@ -510,8 +504,8 @@ if os.path.exists(IMG_FOLDER):
       categorias_disponibles.append(cat)
 
   cat_to_ids = {}
-  # Variantes actualizadas (Normal y Afortunado como principales)
-  variantes_disponibles = ["Normal", "Afortunado", "Dorado", "Hacker", "Hacker de Botín"]
+  # Únicamente variantes permitidas: Normal y Afortunado
+  variantes_disponibles = ["Normal", "Afortunado"]
   var_to_ids = {v: [] for v in variantes_disponibles}
 
   for f in archivos_crudos:
@@ -1044,7 +1038,7 @@ if os.path.exists(IMG_FOLDER):
     with str_lit.expander("🎨 Tarjetas por Variante"):
       str_lit.markdown(
           "Despliega y genera únicamente la tarjeta de la variante que"
-          " necesites (Ej. Normal, Afortunado, Dorado, etc.):"
+          " necesites (Normal o Afortunado):"
       )
       
       for var in variantes_disponibles:
