@@ -116,21 +116,20 @@ def extraer_numero_orden(nombre_archivo):
 
 
 def limpiar_nombre_archivo(nombre_archivo):
-  """Quita la extensión y limpia caracteres extra."""
   nombre_sin_ext = os.path.splitext(nombre_archivo)[0]
   return nombre_sin_ext
 
 
 def obtener_titulo_categoria(nombre_archivo):
   nombre_limpio = limpiar_nombre_archivo(nombre_archivo)
-  # Quitar el número inicial si lo tiene (ej. #1-Bananin -> Bananin)
   nombre_sin_num = re.sub(r'^#?\d+\s*-?\s*', '', nombre_limpio)
   partes = nombre_sin_num.split("-")
   if len(partes) >= 2:
     return partes[1].replace("_", " ").title()
-  # Si no tiene guion, intentamos separar por espacios o guion bajo quitando variantes conocidas
+  
   cat_base = partes[0].replace("_", " ")
-  for var in ["Afortunado", "Dorado", "Hacker", "Cazarecompensas", "Patito", "Dulce", "Truco"]:
+  # Limpiar variantes conocidas para que no ensucien la categoría base si no llevan guion
+  for var in ["Afortunado", "Dorado", "Hacker"]:
     cat_base = re.sub(re.escape(var), '', cat_base, flags=re.IGNORECASE).strip()
   return cat_base.title() if cat_base else "General"
 
@@ -139,18 +138,12 @@ def obtener_variante(nombre_archivo):
   nombre_base = limpiar_nombre_archivo(nombre_archivo).lower()
   if "afortunado" in nombre_base:
     return "Afortunado"
-  elif "cazarecompensas" in nombre_base:
-    return "Cazarecompensas"
   elif "dorado" in nombre_base:
     return "Dorado"
   elif "hacker" in nombre_base and ("botin" in nombre_base or "botín" in nombre_base):
     return "Hacker de Botín"
   elif "hacker" in nombre_base:
     return "Hacker"
-  elif "dulce" in nombre_base or "truco" in nombre_base or "halloween" in nombre_base:
-    return "Dulce o Truco"
-  elif "patito" in nombre_base:
-    return "Patito"
   else:
     return "Normal"
 
@@ -517,7 +510,8 @@ if os.path.exists(IMG_FOLDER):
       categorias_disponibles.append(cat)
 
   cat_to_ids = {}
-  variantes_disponibles = ["Normal", "Afortunado", "Dorado", "Hacker", "Hacker de Botín", "Cazarecompensas", "Dulce o Truco", "Patito"]
+  # Variantes actualizadas (Normal y Afortunado como principales)
+  variantes_disponibles = ["Normal", "Afortunado", "Dorado", "Hacker", "Hacker de Botín"]
   var_to_ids = {v: [] for v in variantes_disponibles}
 
   for f in archivos_crudos:
