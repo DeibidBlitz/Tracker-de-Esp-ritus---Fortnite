@@ -120,7 +120,7 @@ def limpiar_nombre_archivo(nombre_archivo):
 
 
 def obtener_datos_archivo(nombre_archivo):
-  """Extrae inteligentemente la categoría base y detecta si es Normal, Afortunado o Maldito."""
+  """Extrae la categoría completa (respetando nombres compuestos) y detecta la variante."""
   nombre_limpio = limpiar_nombre_archivo(nombre_archivo)
   nombre_sin_num = re.sub(r'^#?\d+\s*-?\s*', '', nombre_limpio).strip()
   nombre_lower = nombre_sin_num.lower()
