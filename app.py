@@ -120,9 +120,9 @@ def limpiar_nombre_archivo(nombre_archivo):
 
 
 def obtener_datos_archivo(nombre_archivo):
-  """Extrae la categoría completa (respetando nombres compuestos) y detecta la variante."""
+  """Extrae la categoría completa (incluyendo nombres compuestos) y detecta la variante exacta."""
   nombre_limpio = limpiar_nombre_archivo(nombre_archivo)
-  nombre_sin_num = re.sub(r'^#?\d+\s*-?\s*', '', nombre_limpio).strip()
+  nombre_sin_num = re.sub(r'^#?\d+\s*[-_]?\s*', '', nombre_limpio).strip()
   nombre_lower = nombre_sin_num.lower()
 
   variante = "Normal"
@@ -511,6 +511,7 @@ if os.path.exists(IMG_FOLDER):
       categorias_disponibles.append(cat)
 
   cat_to_ids = {}
+  # Se fijan estrictamente las 3 variantes solicitadas
   variantes_disponibles = ["Normal", "Afortunado", "Maldito"]
   var_to_ids = {v: [] for v in variantes_disponibles}
 
