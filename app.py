@@ -116,30 +116,28 @@ def extraer_numero_orden(nombre_archivo):
 
 
 def limpiar_nombre_archivo(nombre_archivo):
-  nombre_sin_ext = os.path.splitext(nombre_archivo)[0]
-  return nombre_sin_ext
+  return os.path.splitext(nombre_archivo)[0]
 
 
 def obtener_titulo_categoria(nombre_archivo):
+  """Extrae la categoría base (primera palabra del nombre del espíritu)."""
   nombre_limpio = limpiar_nombre_archivo(nombre_archivo)
   nombre_sin_num = re.sub(r'^#?\d+\s*-?\s*', '', nombre_limpio)
-  partes = nombre_sin_num.split("-")
-  if len(partes) >= 2:
-    return partes[1].replace("_", " ").title()
-  
-  cat_base = partes[0].replace("_", " ")
-  # Limpiar la variante afortunado para que no ensucie la categoría base si no lleva guion
-  cat_base = re.sub(r'afortunado', '', cat_base, flags=re.IGNORECASE).strip()
-  return cat_base.title() if cat_base else "General"
+  partes = re.split(r'[-_]', nombre_sin_num)
+  if partes and partes[0]:
+    return partes[0].replace("_", " ").title()
+  return "General"
 
 
 def obtener_variante(nombre_archivo):
-  """Solo reconoce las variantes Normal y Afortunado."""
-  nombre_base = limpiar_nombre_archivo(nombre_archivo).lower()
-  if "afortunado" in nombre_base:
-    return "Afortunado"
-  else:
-    return "Normal"
+  """Detecta los modificadores y variantes (Huesudo, Maldito, Afortunado, etc.)."""
+  nombre_limpio = limpiar_nombre_archivo(nombre_archivo)
+  nombre_sin_num = re.sub(r'^#?\d+\s*-?\s*', '', nombre_limpio)
+  partes = re.split(r'[-_]', nombre_sin_num)
+  if len(partes) > 1:
+    variante_str = " ".join(partes[1:]).replace("_", " ").strip().title()
+    return variante_str if variante_str else "Normal"
+  return "Normal"
 
 
 def obtener_nombre_limpio(nombre_base):
@@ -504,8 +502,8 @@ if os.path.exists(IMG_FOLDER):
       categorias_disponibles.append(cat)
 
   cat_to_ids = {}
-  # Únicamente variantes permitidas: Normal y Afortunado
-  variantes_disponibles = ["Normal", "Afortunado"]
+  # Obtener todas las variantes únicas detectadas dinámicamente
+  variantes_disponibles = sorted(list(set(obtener_variante(f) for f in archivos_crudos)))
   var_to_ids = {v: [] for v in variantes_disponibles}
 
   for f in archivos_crudos:
@@ -1038,7 +1036,7 @@ if os.path.exists(IMG_FOLDER):
     with str_lit.expander("🎨 Tarjetas por Variante"):
       str_lit.markdown(
           "Despliega y genera únicamente la tarjeta de la variante que"
-          " necesites (Normal o Afortunado):"
+          " necesites:"
       )
       
       for var in variantes_disponibles:
