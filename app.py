@@ -119,25 +119,35 @@ def limpiar_nombre_archivo(nombre_archivo):
   return os.path.splitext(nombre_archivo)[0]
 
 
-def obtener_titulo_categoria(nombre_archivo):
-  """Extrae la categoría base (primera palabra del nombre del espíritu)."""
+# Lista de variantes conocidas que pueden aparecer al final del nombre
+VARIANTES_CONOCIDAS = ["afortunado", "maldito", "dorado", "hacker de botín", "hacker"]
+
+def obtener_datos_archivo(nombre_archivo):
+  """Extrae inteligentemente la categoría base y la variante de nombres multi-palabra."""
   nombre_limpio = limpiar_nombre_archivo(nombre_archivo)
-  nombre_sin_num = re.sub(r'^#?\d+\s*-?\s*', '', nombre_limpio)
-  partes = re.split(r'[-_]', nombre_sin_num)
-  if partes and partes[0]:
-    return partes[0].replace("_", " ").title()
-  return "General"
+  nombre_sin_num = re.sub(r'^#?\d+\s*-?\s*', '', nombre_limpio).strip()
+  nombre_lower = nombre_sin_num.lower()
+  
+  for var in VARIANTES_CONOCIDAS:
+    patron = r'[\s_]' + re.escape(var) + '$'
+    if nombre_lower == var or re.search(patron, nombre_lower):
+      variante_encontrada = var.title()
+      nombre_sin_var = re.sub(r'[\s_]+' + re.escape(var) + '$', '', nombre_sin_num, flags=re.IGNORECASE)
+      categoria = nombre_sin_var.replace("_", " ").title()
+      return categoria, variante_encontrada
+
+  categoria = nombre_sin_num.replace("_", " ").title()
+  return categoria, "Normal"
+
+
+def obtener_titulo_categoria(nombre_archivo):
+  cat, _ = obtener_datos_archivo(nombre_archivo)
+  return cat
 
 
 def obtener_variante(nombre_archivo):
-  """Detecta los modificadores y variantes (Huesudo, Maldito, Afortunado, etc.)."""
-  nombre_limpio = limpiar_nombre_archivo(nombre_archivo)
-  nombre_sin_num = re.sub(r'^#?\d+\s*-?\s*', '', nombre_limpio)
-  partes = re.split(r'[-_]', nombre_sin_num)
-  if len(partes) > 1:
-    variante_str = " ".join(partes[1:]).replace("_", " ").strip().title()
-    return variante_str if variante_str else "Normal"
-  return "Normal"
+  _, var = obtener_datos_archivo(nombre_archivo)
+  return var
 
 
 def obtener_nombre_limpio(nombre_base):
@@ -502,7 +512,6 @@ if os.path.exists(IMG_FOLDER):
       categorias_disponibles.append(cat)
 
   cat_to_ids = {}
-  # Obtener todas las variantes únicas detectadas dinámicamente
   variantes_disponibles = sorted(list(set(obtener_variante(f) for f in archivos_crudos)))
   var_to_ids = {v: [] for v in variantes_disponibles}
 
