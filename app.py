@@ -14,6 +14,17 @@ str_lit.set_page_config(
     page_title="Tracker de Espíritus", page_icon="✨", layout="wide"
 )
 
+# =====================================================================
+# 🛠️ SECCIÓN DE EXCEPCIONES PARA NOMBRES COMPUESTOS / ESPECIALES
+# Si en el futuro tienes más espíritus con nombres de varias palabras que 
+# requieran un trato especial, solo agrégalos aquí en formato minúsculas y con guiones bajos.
+# =====================================================================
+EXCEPCIONES_ESPIRITUS = {
+    "lil_flacko": "Lil Flacko",
+    "lil_uzi_vert_jr": "Lil Uzi Vert Jr",
+    # Ejemplo para agregar futuros: "nombre_del_espiritu": "Nombre Del Espíritu",
+}
+
 # --- CONEXIÓN A SUPABASE ---
 try:
     url: str = str_lit.secrets["supabase"]["url"]
@@ -119,25 +130,40 @@ def limpiar_nombre_archivo(nombre_archivo):
   return os.path.splitext(nombre_archivo)[0]
 
 
-# Lista de variantes conocidas que pueden aparecer al final del nombre
 VARIANTES_CONOCIDAS = ["afortunado", "maldito", "dorado", "hacker de botín", "hacker"]
 
 def obtener_datos_archivo(nombre_archivo):
-  """Extrae inteligentemente la categoría base y la variante de nombres multi-palabra."""
+  """Extrae la categoría base y la variante, priorizando excepciones manuales."""
   nombre_limpio = limpiar_nombre_archivo(nombre_archivo)
   nombre_sin_num = re.sub(r'^#?\d+\s*-?\s*', '', nombre_limpio).strip()
   nombre_lower = nombre_sin_num.lower()
+  
+  # 1. Detectar si tiene variante al final
+  variante_encontrada = "Normal"
+  nombre_sin_var = nombre_sin_num
+  nombre_lower_sin_var = nombre_lower
   
   for var in VARIANTES_CONOCIDAS:
     patron = r'[\s_]' + re.escape(var) + '$'
     if nombre_lower == var or re.search(patron, nombre_lower):
       variante_encontrada = var.title()
-      nombre_sin_var = re.sub(r'[\s_]+' + re.escape(var) + '$', '', nombre_sin_num, flags=re.IGNORECASE)
-      categoria = nombre_sin_var.replace("_", " ").title()
-      return categoria, variante_encontrada
+      nombre_sin_var = re.sub(r'[\s_]+' + re.escape(var) + '$', '', nombre_sin_num, flags=re.IGNORECASE).strip()
+      nombre_lower_sin_var = nombre_sin_var.lower()
+      break
 
-  categoria = nombre_sin_num.replace("_", " ").title()
-  return categoria, "Normal"
+  # 2. Verificar si el nombre base está en las excepciones manuales
+  clave_excepcion = nombre_lower_sin_var.replace(" ", "_")
+  if clave_excepcion in EXCEPCIONES_ESPIRITUS:
+    return EXCEPCIONES_ESPIRITUS[clave_excepcion], variante_encontrada
+
+  # 3. Comportamiento estándar para el resto de espíritus
+  partes = nombre_sin_var.split("-")
+  if len(partes) >= 2:
+    categoria = partes[1].replace("_", " ").title()
+  else:
+    categoria = partes[0].replace("_", " ").title()
+    
+  return categoria, variante_encontrada
 
 
 def obtener_titulo_categoria(nombre_archivo):
