@@ -119,34 +119,25 @@ def limpiar_nombre_archivo(nombre_archivo):
   return os.path.splitext(nombre_archivo)[0]
 
 
-def obtener_datos_archivo(nombre_archivo):
-  """Extrae la categoría completa (incluyendo nombres compuestos) y detecta la variante exacta."""
-  nombre_limpio = limpiar_nombre_archivo(nombre_archivo)
-  nombre_sin_num = re.sub(r'^#?\d+\s*[-_]?\s*', '', nombre_limpio).strip()
-  nombre_lower = nombre_sin_num.lower()
-
-  variante = "Normal"
-  if nombre_lower.endswith("_afortunado") or nombre_lower.endswith(" afortunado"):
-    variante = "Afortunado"
-    nombre_sin_var = re.sub(r'[\s_]+afortunado$', '', nombre_sin_num, flags=re.IGNORECASE).strip()
-  elif nombre_lower.endswith("_maldito") or nombre_lower.endswith(" maldito"):
-    variante = "Maldito"
-    nombre_sin_var = re.sub(r'[\s_]+maldito$', '', nombre_sin_num, flags=re.IGNORECASE).strip()
-  else:
-    nombre_sin_var = nombre_sin_num
-
-  categoria = nombre_sin_var.replace("_", " ").title()
-  return categoria if categoria else "General", variante
-
-
 def obtener_titulo_categoria(nombre_archivo):
-  cat, _ = obtener_datos_archivo(nombre_archivo)
-  return cat
+  """Extrae la categoría base (primera palabra del nombre del espíritu)."""
+  nombre_limpio = limpiar_nombre_archivo(nombre_archivo)
+  nombre_sin_num = re.sub(r'^#?\d+\s*-?\s*', '', nombre_limpio)
+  partes = re.split(r'[-_]', nombre_sin_num)
+  if partes and partes[0]:
+    return partes[0].replace("_", " ").title()
+  return "General"
 
 
 def obtener_variante(nombre_archivo):
-  _, var = obtener_datos_archivo(nombre_archivo)
-  return var
+  """Detecta los modificadores y variantes (Huesudo, Maldito, Afortunado, etc.)."""
+  nombre_limpio = limpiar_nombre_archivo(nombre_archivo)
+  nombre_sin_num = re.sub(r'^#?\d+\s*-?\s*', '', nombre_limpio)
+  partes = re.split(r'[-_]', nombre_sin_num)
+  if len(partes) > 1:
+    variante_str = " ".join(partes[1:]).replace("_", " ").strip().title()
+    return variante_str if variante_str else "Normal"
+  return "Normal"
 
 
 def obtener_nombre_limpio(nombre_base):
@@ -273,10 +264,11 @@ def generar_imagen_coleccion(
   capa_ui = Image.new("RGBA", (ancho_total, alto_total), (0, 0, 0, 0))
   d_ui = ImageDraw.Draw(capa_ui)
 
+  # Marco superior cambiado a Azul (#0080FF)
   d_ui.rectangle(
       [padding_lateral, 15, ancho_total - padding_lateral, 75],
-      fill=(10, 40, 15, 230),
-      outline=(0, 255, 100, 255),
+      fill=(10, 25, 50, 230),
+      outline=(0, 128, 255, 255),
       width=2,
   )
 
@@ -294,10 +286,11 @@ def generar_imagen_coleccion(
           width=2,
       )
     else:
+      # Celdas con contorno Azul (#0080FF)
       d_ui.rectangle(
           [x - 5, y - 5, x + 75, y + 100],
-          fill=(10, 30, 10, 160),
-          outline=(0, 200, 80, 220),
+          fill=(10, 20, 35, 160),
+          outline=(0, 128, 255, 220),
           width=2,
       )
 
@@ -403,7 +396,7 @@ def generar_imagen_coleccion(
       img_final.paste(img_check_mini, (current_x, pos_y_iconos), img_check_mini)
       current_x += 26
     else:
-      d.text((current_x, pos_y_texto), "✓", fill=(0, 255, 100), font=font_contador)
+      d.text((current_x, pos_y_texto), "✓", fill=(0, 128, 255), font=font_contador)
       current_x += 20
 
     d.text(
@@ -467,12 +460,12 @@ def generar_imagen_coleccion(
           d.text((x + 24, y + 75), "👑", fill=(255, 215, 0))
       elif is_checked:
         d.rectangle(
-            [x + 22, y + 75, x + 48, y + 95], outline=(0, 255, 100), width=1
+            [x + 22, y + 75, x + 48, y + 95], outline=(0, 128, 255), width=1
         )
         if img_check:
           img_final.paste(img_check, (x + 22, y + 73), img_check)
         else:
-          d.text((x + 28, y + 76), "✓", fill=(0, 255, 100))
+          d.text((x + 28, y + 76), "✓", fill=(0, 128, 255))
 
   buf = io.BytesIO()
   img_final.save(buf, format="PNG")
@@ -511,7 +504,6 @@ if os.path.exists(IMG_FOLDER):
       categorias_disponibles.append(cat)
 
   cat_to_ids = {}
-  # Se fijan estrictamente las 3 variantes solicitadas
   variantes_disponibles = ["Normal", "Afortunado", "Maldito"]
   var_to_ids = {v: [] for v in variantes_disponibles}
 
