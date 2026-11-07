@@ -119,25 +119,34 @@ def limpiar_nombre_archivo(nombre_archivo):
   return os.path.splitext(nombre_archivo)[0]
 
 
-def obtener_titulo_categoria(nombre_archivo):
-  """Extrae la categoría base (primera palabra del nombre del espíritu)."""
+def obtener_datos_archivo(nombre_archivo):
+  """Extrae la categoría base completa y detecta correctamente su variante."""
   nombre_limpio = limpiar_nombre_archivo(nombre_archivo)
-  nombre_sin_num = re.sub(r'^#?\d+\s*-?\s*', '', nombre_limpio)
-  partes = re.split(r'[-_]', nombre_sin_num)
-  if partes and partes[0]:
-    return partes[0].replace("_", " ").title()
-  return "General"
+  nombre_sin_num = re.sub(r'^#?\d+\s*[-_]?\s*', '', nombre_limpio).strip()
+  nombre_lower = nombre_sin_num.lower()
+
+  variante = "Normal"
+  if nombre_lower.endswith("_afortunado") or nombre_lower.endswith(" afortunado"):
+    variante = "Afortunado"
+    nombre_sin_var = re.sub(r'[\s_]+afortunado$', '', nombre_sin_num, flags=re.IGNORECASE).strip()
+  elif nombre_lower.endswith("_maldito") or nombre_lower.endswith(" maldito"):
+    variante = "Maldito"
+    nombre_sin_var = re.sub(r'[\s_]+maldito$', '', nombre_sin_num, flags=re.IGNORECASE).strip()
+  else:
+    nombre_sin_var = nombre_sin_num
+
+  categoria = nombre_sin_var.replace("_", " ").title()
+  return categoria if categoria else "General", variante
+
+
+def obtener_titulo_categoria(nombre_archivo):
+  cat, _ = obtener_datos_archivo(nombre_archivo)
+  return cat
 
 
 def obtener_variante(nombre_archivo):
-  """Detecta los modificadores y variantes (Huesudo, Maldito, Afortunado, etc.)."""
-  nombre_limpio = limpiar_nombre_archivo(nombre_archivo)
-  nombre_sin_num = re.sub(r'^#?\d+\s*-?\s*', '', nombre_limpio)
-  partes = re.split(r'[-_]', nombre_sin_num)
-  if len(partes) > 1:
-    variante_str = " ".join(partes[1:]).replace("_", " ").strip().title()
-    return variante_str if variante_str else "Normal"
-  return "Normal"
+  _, var = obtener_datos_archivo(nombre_archivo)
+  return var
 
 
 def obtener_nombre_limpio(nombre_base):
@@ -264,7 +273,7 @@ def generar_imagen_coleccion(
   capa_ui = Image.new("RGBA", (ancho_total, alto_total), (0, 0, 0, 0))
   d_ui = ImageDraw.Draw(capa_ui)
 
-  # Marco superior cambiado a Azul (#0080FF)
+  # Marco superior con Azul (#0080FF)
   d_ui.rectangle(
       [padding_lateral, 15, ancho_total - padding_lateral, 75],
       fill=(10, 25, 50, 230),
