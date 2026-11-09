@@ -30,6 +30,7 @@ IMAGEN_FONDO_CATEGORIA_PATH = os.path.join(IMG_FOLDER, "fondo_categoria.png")
 IMAGEN_FONDO_VARIANTE_PATH = os.path.join(IMG_FOLDER, "fondo_variante.png")
 CHECK_ICON_PATH = os.path.join(IMG_FOLDER, "check_verde.png")
 CORONA_ICON_PATH = os.path.join(IMG_FOLDER, "corona.png")
+TOKEN_ICON_PATH = os.path.join(IMG_FOLDER, "token_pirata.png")
 LINKTREE_URL = "https://linktr.ee/deibid_blitz"
 
 # --- ESTILOS CSS Y FONDO DE LA APP ---
@@ -231,6 +232,7 @@ def generar_imagen_coleccion(
     mostrar_marcas=True,
     tipo_tarjeta="general",
     usuario_id=None,
+    mostrar_token=False,
 ):
   if not lista_ordenada_archivos:
     img_vacia = Image.new("RGBA", (400, 150), color=(20, 20, 20, 255))
@@ -320,6 +322,18 @@ def generar_imagen_coleccion(
   pos_qr_x = ancho_total - padding_lateral - img_qr_pil.width - 10
   pos_qr_y = alto_total - img_qr_pil.height - 15
   img_final.paste(img_qr_pil, (pos_qr_x, pos_qr_y), img_qr_pil)
+
+  # Inserción del Token Pirata a la izquierda del QR si está habilitado
+  if mostrar_token and os.path.exists(TOKEN_ICON_PATH):
+    try:
+      img_token = Image.open(TOKEN_ICON_PATH).convert("RGBA")
+      # Mismo tamaño aproximado que el código QR
+      img_token = img_token.resize((img_qr_pil.width, img_qr_pil.height))
+      pos_token_x = pos_qr_x - img_token.width - 15
+      pos_token_y = pos_qr_y
+      img_final.paste(img_token, (pos_token_x, pos_token_y), img_token)
+    except Exception as e:
+      print(f"Error al pegar el token pirata: {e}")
 
   ruta_fuente = os.path.join(IMG_FOLDER, "BURBANK.ttf")
   try:
@@ -486,6 +500,7 @@ if os.path.exists(IMG_FOLDER):
   archivos_ignorar = {
       "check_verde.png",
       "corona.png",
+      "token_pirata.png",
       "fondo_app.png",
       "fondo_catalogo.png",
       "fondo_categoria.png",
@@ -965,11 +980,19 @@ if os.path.exists(IMG_FOLDER):
       help="Activa esta opción para exportar las tarjetas en blanco, sin mostrar qué espíritus tienes obtenidos o dominados."
   )
 
-  usuario_id_input = str_lit.text_input(
-      "🆔 (Opcional) Tu ID o Nombre de Usuario para mostrar en las tarjetas",
-      value="",
-      placeholder="Ej. id_epic",
-  )
+  col_id, col_token = str_lit.columns([2, 1])
+  with col_id:
+    usuario_id_input = str_lit.text_input(
+        "🆔 (Opcional) Tu ID o Nombre de Usuario para mostrar en las tarjetas",
+        value="",
+        placeholder="Ej. id_epic",
+    )
+  with col_token:
+    mostrar_token_input = str_lit.checkbox(
+        "🪙 Mostrar Token Pirata",
+        value=False,
+        help="Habilita la insignia del token pirata a la izquierda del código QR en las tarjetas."
+    )
 
   fondo_custom_usuario = str_lit.file_uploader(
       "🎨 (Opcional) Subir imagen de fondo personalizada para la tarjeta",
@@ -988,6 +1011,7 @@ if os.path.exists(IMG_FOLDER):
         mostrar_marcas=not modo_plantilla,
         tipo_tarjeta="general",
         usuario_id=usuario_id_input,
+        mostrar_token=mostrar_token_input,
     )
     str_lit.download_button(
         label=(
@@ -1032,6 +1056,7 @@ if os.path.exists(IMG_FOLDER):
                       mostrar_marcas=not modo_plantilla,
                       tipo_tarjeta="categoria",
                       usuario_id=usuario_id_input,
+                      mostrar_token=mostrar_token_input,
                   )
                 str_lit.download_button(
                     label=f"💾 Descargar {cat}.png",
@@ -1073,6 +1098,7 @@ if os.path.exists(IMG_FOLDER):
                       mostrar_marcas=not modo_plantilla,
                       tipo_tarjeta="variante",
                       usuario_id=usuario_id_input,
+                      mostrar_token=mostrar_token_input,
                   )
                 str_lit.download_button(
                     label=f"💾 Descargar {var}.png",
@@ -1136,6 +1162,7 @@ if os.path.exists(IMG_FOLDER):
         mostrar_marcas=not modo_plantilla,
         tipo_tarjeta="general",
         usuario_id=usuario_id_input,
+        mostrar_token=mostrar_token_input,
     )
     str_lit.download_button(
         label=(
