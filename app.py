@@ -33,7 +33,7 @@ CORONA_ICON_PATH = os.path.join(IMG_FOLDER, "corona.png")
 TOKEN_ICON_PATH = os.path.join(IMG_FOLDER, "token_pirata.png")
 LINKTREE_URL = "https://linktr.ee/deibid_blitz"
 
-# --- ESTILOS CSS Y FONDO DE LA APP ---
+# --- ESTILOS CSS Y FONDO DE LA APP (CON CONTRASTE MEJORADO PARA TEXTOS) ---
 if os.path.exists(IMAGEN_FONDO_APP_PATH):
   import base64
 
@@ -50,18 +50,23 @@ if os.path.exists(IMAGEN_FONDO_APP_PATH):
         background-repeat: no-repeat;
         background-attachment: fixed;
     }}
+    /* Forzar color blanco y alta visibilidad para todos los textos principales en el área de contenido */
+    .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6, .stApp p, .stApp span, .stApp label, .stMarkdown {{
+        color: #ffffff !important;
+        text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.9);
+    }}
     div[data-baseweb="select"] {{
         max-width: 300px;
     }}
     div.stCheckbox {{
-        background-color: rgba(30, 20, 10, 0.6);
-        border: 1px solid rgba(255, 140, 0, 0.3);
+        background-color: rgba(30, 20, 10, 0.75);
+        border: 1px solid rgba(255, 140, 0, 0.4);
         padding: 5px 10px;
         border-radius: 8px;
         margin-bottom: 5px;
     }}
     div.stCheckbox:hover {{
-        border-color: rgba(255, 140, 0, 0.8);
+        border-color: rgba(255, 140, 0, 0.9);
     }}
     div.stButton > button {{
         background: linear-gradient(135deg, #ff8c00 0%, #ff6600 100%) !important;
@@ -76,9 +81,9 @@ if os.path.exists(IMAGEN_FONDO_APP_PATH):
         color: white !important;
     }}
     div.stButton > button:disabled {{
-        background: rgba(50, 50, 50, 0.5) !important;
-        border-color: rgba(100, 100, 100, 0.3) !important;
-        color: #888 !important;
+        background: rgba(50, 50, 50, 0.6) !important;
+        border-color: rgba(100, 100, 100, 0.4) !important;
+        color: #aaa !important;
     }}
     </style>
     """
@@ -327,7 +332,6 @@ def generar_imagen_coleccion(
   if mostrar_token and os.path.exists(TOKEN_ICON_PATH):
     try:
       img_token = Image.open(TOKEN_ICON_PATH).convert("RGBA")
-      # Mismo tamaño aproximado que el código QR
       img_token = img_token.resize((img_qr_pil.width, img_qr_pil.height))
       pos_token_x = pos_qr_x - img_token.width - 15
       pos_token_y = pos_qr_y
@@ -927,7 +931,7 @@ if os.path.exists(IMG_FOLDER):
           str_lit.image(f"{IMG_FOLDER}/{archivo}", width=100)
           str_lit.markdown(
               f"<div style='text-align: center; font-weight: bold; font-size:"
-              f" 13px; margin-bottom: 5px;'>{nombre_mostrado}</div>",
+              f" 13px; margin-bottom: 5px; color: white;'>{nombre_mostrado}</div>",
               unsafe_allow_html=True,
           )
 
