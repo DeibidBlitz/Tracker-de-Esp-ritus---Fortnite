@@ -138,6 +138,9 @@ def obtener_datos_archivo(nombre_archivo):
   elif nombre_lower.endswith("_maldito") or nombre_lower.endswith(" maldito"):
     variante = "Maldito"
     nombre_sin_var = re.sub(r'[\s_]+maldito$', '', nombre_sin_num, flags=re.IGNORECASE).strip()
+  elif nombre_lower.endswith("_dorado") or nombre_lower.endswith(" dorado"):
+    variante = "Dorado"
+    nombre_sin_var = re.sub(r'[\s_]+dorado$', '', nombre_sin_num, flags=re.IGNORECASE).strip()
   else:
     nombre_sin_var = nombre_sin_num
 
@@ -532,7 +535,7 @@ if os.path.exists(IMG_FOLDER):
       categorias_disponibles.append(cat)
 
   cat_to_ids = {}
-  variantes_disponibles = ["Normal", "Afortunado", "Maldito"]
+  variantes_disponibles = ["Normal", "Afortunado", "Maldito", "Dorado"]
   var_to_ids = {v: [] for v in variantes_disponibles}
 
   for f in archivos_crudos:
