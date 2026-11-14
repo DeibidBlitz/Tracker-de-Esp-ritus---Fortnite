@@ -520,7 +520,7 @@ if os.path.exists(IMG_FOLDER):
       and not f.startswith("num_")
       and not f.lower().startswith("fondo_")
       and f.lower() not in archivos_ignorar
-  ], key=extraer_numero_orden)
+    ], key=lambda f: (extraer_numero_orden(f), f))
   
   archivos_ordenados = list(archivos_crudos)
   
@@ -897,7 +897,9 @@ if os.path.exists(IMG_FOLDER):
         f for f in archivos_ordenados if obtener_variante(f) == var_seleccionada_principal
     ]
 
-  grupo_filtrado = []
+    if busqueda_texto.strip():
+    archivos_fuente = archivos_ordenados
+    str_lit.caption("Buscando en toda la coleccion, no solo en la categoria/variante seleccionada.")
   for archivo in archivos_fuente:
     nombre_base = limpiar_nombre_archivo(archivo)
     nombre_mostrado = obtener_nombre_limpio(nombre_base)
