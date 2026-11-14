@@ -897,7 +897,7 @@ if os.path.exists(IMG_FOLDER):
         f for f in archivos_ordenados if obtener_variante(f) == var_seleccionada_principal
     ]
 
-    if busqueda_texto.strip():
+  if busqueda_texto.strip():
     archivos_fuente = archivos_ordenados
     str_lit.caption("Buscando en toda la coleccion, no solo en la categoria/variante seleccionada.")
 
