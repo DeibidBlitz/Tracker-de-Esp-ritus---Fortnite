@@ -971,7 +971,7 @@ if os.path.exists(IMG_FOLDER):
               "style='position: absolute; top: -4px; right: -4px; width: 18px; height: 18px; object-fit: contain; pointer-events: none;'>"
           )
 
-        if proximo_lanzamiento:
+       if proximo_lanzamiento:
           str_lit.markdown(
               f"""<div style="text-align:center;opacity:0.35;margin-bottom:6px;"><div style="position:relative;display:inline-block;width:100px;"><img src="{imagen_a_data_uri(ruta_espiritu)}" width="100" style="border-radius:8px;display:block;">{badge_nuevo_html}</div></div>""",
               unsafe_allow_html=True,
@@ -983,6 +983,10 @@ if os.path.exists(IMG_FOLDER):
         else:
           str_lit.markdown(
               f"""<div style="text-align:center;margin-bottom:4px;"><div style="position:relative;display:inline-block;width:100px;"><img src="{imagen_a_data_uri(ruta_espiritu)}" width="100" style="border-radius:8px;display:block;">{badge_nuevo_html}</div></div>""",
+              unsafe_allow_html=True,
+          )
+          str_lit.markdown(
+              f"<p style='text-align:center;font-weight:bold;font-size:13px;color:white;margin:2px 0 6px 0;'>{nombre_mostrado}</p>",
               unsafe_allow_html=True,
           )
           str_lit.markdown(
