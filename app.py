@@ -70,7 +70,7 @@ if os.path.exists(IMAGEN_FONDO_APP_PATH):
         text-shadow: 0px 1px 4px rgba(0, 0, 0, 0.95) !important;
     }}
 
-    /* --- ESTILO CLARO POR DEFECTO (barras y controles claros con texto oscuro) --- */
+    /* --- MODO CLARO --- */
     header[data-testid="stHeader"],
     [data-testid="stToolbar"],
     [data-testid="stDecoration"],
@@ -103,72 +103,80 @@ if os.path.exists(IMAGEN_FONDO_APP_PATH):
         margin-bottom: 5px;
     }}
 
+    /* Selectores e inputs en modo claro: fondo claro y texto oscuro bien legible */
     div[data-baseweb="select"] {{
         max-width: 320px;
     }}
     div[data-baseweb="select"] > div,
+    div[data-baseweb="select"] [data-baseweb="tag"],
     div[data-baseweb="input"] > div,
     div[data-testid="stFileUploader"] section,
     [data-testid="stBaseButton-secondary"] {{
-        background-color: rgba(248, 250, 252, 0.95) !important;
-        border-color: rgba(15, 23, 42, 0.25) !important;
+        background-color: rgba(248, 250, 252, 0.96) !important;
+        border-color: rgba(15, 23, 42, 0.28) !important;
     }}
-    div[data-baseweb="select"] *,
+    div[data-baseweb="select"],
+    div[data-baseweb="select"] > div,
+    div[data-baseweb="select"] > div > div,
+    div[data-baseweb="select"] span,
+    div[data-baseweb="select"] svg,
     div[data-baseweb="input"] input,
     div[data-testid="stFileUploader"] *,
     [data-testid="stBaseButton-secondary"] * {{
-        color: #0f172a !important;
+        color: #111827 !important;
+        fill: #111827 !important;
         text-shadow: none !important;
     }}
 
-    /* --- MODO OSCURO CUANDO STREAMLIT USA TEMA OSCURO --- */
-    .stApp:has([data-testid="stAppViewContainer"][style*="color-scheme: dark"]),
-    .stApp[data-theme="dark"],
-    body:has([data-testid="stAppViewContainer"]) {{
-        --bg-oscuro: var(--background-color);
-    }}
-
+    /* --- MODO OSCURO (tono carbón cálido similar a la barra de búsqueda) --- */
     @media (prefers-color-scheme: dark) {{
         header[data-testid="stHeader"],
         [data-testid="stToolbar"],
         [data-testid="stDecoration"],
         div[data-testid="stPopoverBody"],
         ul[role="listbox"] {{
-            background-color: rgba(15, 23, 42, 0.95) !important;
+            background-color: rgba(28, 25, 23, 0.95) !important;
         }}
         header[data-testid="stHeader"] *,
         [data-testid="stToolbar"] *,
         div[data-testid="stPopoverBody"] *,
         ul[role="listbox"] * {{
-            color: #f8fafc !important;
+            color: #f5f5f4 !important;
+            fill: #f5f5f4 !important;
             text-shadow: none !important;
         }}
 
         section[data-testid="stSidebar"] {{
-            background-color: rgba(15, 23, 42, 0.96) !important;
-            border-right: 1px solid rgba(148, 163, 184, 0.22);
+            background-color: rgba(28, 25, 23, 0.96) !important;
+            border-right: 1px solid rgba(214, 211, 209, 0.18);
         }}
         section[data-testid="stSidebar"] * {{
-            color: #f8fafc !important;
+            color: #f5f5f4 !important;
             text-shadow: none !important;
         }}
         section[data-testid="stSidebar"] div.stCheckbox {{
-            background-color: rgba(30, 41, 59, 0.92);
-            border: 1px solid rgba(148, 163, 184, 0.28);
+            background-color: rgba(41, 37, 36, 0.92);
+            border: 1px solid rgba(214, 211, 209, 0.22);
         }}
 
         div[data-baseweb="select"] > div,
+        div[data-baseweb="select"] [data-baseweb="tag"],
         div[data-baseweb="input"] > div,
         div[data-testid="stFileUploader"] section,
         [data-testid="stBaseButton-secondary"] {{
-            background-color: rgba(15, 23, 42, 0.94) !important;
-            border-color: rgba(148, 163, 184, 0.32) !important;
+            background-color: rgba(28, 25, 23, 0.94) !important;
+            border-color: rgba(214, 211, 209, 0.28) !important;
         }}
-        div[data-baseweb="select"] *,
+        div[data-baseweb="select"],
+        div[data-baseweb="select"] > div,
+        div[data-baseweb="select"] > div > div,
+        div[data-baseweb="select"] span,
+        div[data-baseweb="select"] svg,
         div[data-baseweb="input"] input,
         div[data-testid="stFileUploader"] *,
         [data-testid="stBaseButton-secondary"] * {{
-            color: #f8fafc !important;
+            color: #f5f5f4 !important;
+            fill: #f5f5f4 !important;
             text-shadow: none !important;
         }}
     }}
@@ -188,9 +196,9 @@ if os.path.exists(IMAGEN_FONDO_APP_PATH):
         color: #ffffff !important;
     }}
     div.stButton > button:disabled {{
-        background: rgba(100, 116, 139, 0.75) !important;
-        border-color: rgba(148, 163, 184, 0.35) !important;
-        color: #e2e8f0 !important;
+        background: rgba(120, 113, 108, 0.75) !important;
+        border-color: rgba(214, 211, 209, 0.3) !important;
+        color: #e7e5e4 !important;
         text-shadow: none !important;
     }}
     </style>
