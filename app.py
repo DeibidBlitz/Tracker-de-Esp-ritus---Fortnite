@@ -36,7 +36,7 @@ NUEVO_ICON_PATH = os.path.join(IMG_FOLDER, "signo_exclamacion_vector.png")
 LINKTREE_URL = "https://linktr.ee/deibid_blitz"
 
 # --- LISTA INTERNA DE ESPÍRITUS NUEVOS ---
-CATEGORIAS_NUEVAS = {"calamarin", "mini miku", "sir oscar", "impulso cero"}
+CATEGORIAS_NUEVAS = { "sir oscar"}
 VARIANTES_NUEVAS = {"dorado"}
 
 # --- ESTILOS CSS Y FONDO DE LA APP (CON CONTRASTE MEJORADO PARA TEXTOS) ---
