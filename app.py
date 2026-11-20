@@ -92,21 +92,33 @@ if os.path.exists(IMAGEN_FONDO_APP_PATH):
 
     /* Texto oscuro garantizado en selectores, input interno y lista desplegable en modo claro */
     div[data-baseweb="select"] input,
-    div[data-baseweb="select"] [aria-selected="true"],
-    ul[role="listbox"] li,
-    ul[role="listbox"] li * {{
-        color: #0f172a !important;
-        -webkit-text-fill-color: #0f172a !important;
-        text-shadow: none !important;
+    /* 1) Texto visible en Modo de Visualización (tanto en reposo como seleccionado) */
+    div[data-baseweb="select"] div[class*="ValueContainer"],
+    div[data-baseweb="select"] div[class*="ValueContainer"] *,
+    div[data-baseweb="select"] div[class*="singleValue"],
+    div[data-baseweb="select"] input {{
+        color: #111827 !important;
+        -webkit-text-fill-color: #111827 !important;
+        opacity: 1 !important;
     }}
 
-    section[data-testid="stSidebar"] {{
-        background-color: rgba(241, 245, 249, 0.95) !important;
-        border-right: 1px solid rgba(15, 23, 42, 0.16);
-    }}
-    section[data-testid="stSidebar"] * {{
+    /* 2) Quitar el cuadro blanco de los tres puntitos y hacer visibles los puntos */
+    [data-testid="stMainMenu"],
+    [data-testid="stMainMenu"] > div,
+    [data-testid="stMainMenu"] button,
+    header[data-testid="stHeader"] [data-testid="stMainMenu"] button {{
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
         color: #0f172a !important;
-        text-shadow: none !important;
+    }}
+    [data-testid="stMainMenu"] button svg,
+    [data-testid="stMainMenu"] button svg * {{
+        color: #0f172a !important;
+        fill: #0f172a !important;
+        stroke: #0f172a !important;
+        opacity: 1 !important;
     }}
     section[data-testid="stSidebar"] div.stCheckbox {{
         background-color: rgba(255, 255, 255, 0.92);
