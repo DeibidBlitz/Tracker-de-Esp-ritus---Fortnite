@@ -48,183 +48,46 @@ if os.path.exists(IMAGEN_FONDO_APP_PATH):
   custom_css = f"""
     <style>
     .stApp {{
-        background-image: linear-gradient(rgba(0, 0, 0, 0.76), rgba(0, 0, 0, 0.76)), url("data:image/webp;base64,{encoded_bg}");
+        background-image: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.75)), url("data:image/webp;base64,{encoded_bg}");
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
         background-attachment: fixed;
     }}
-
-    /* Área principal: siempre texto claro con sombra para destacar sobre el fondo */
-    [data-testid="stAppViewContainer"] h1,
-    [data-testid="stAppViewContainer"] h2,
-    [data-testid="stAppViewContainer"] h3,
-    [data-testid="stAppViewContainer"] h4,
-    [data-testid="stAppViewContainer"] h5,
-    [data-testid="stAppViewContainer"] h6,
-    [data-testid="stAppViewContainer"] p,
-    [data-testid="stAppViewContainer"] label,
-    [data-testid="stAppViewContainer"] [data-testid="stMetricLabel"],
-    [data-testid="stAppViewContainer"] [data-testid="stMetricValue"] {{
-        color: #f8fafc !important;
-        text-shadow: 0px 1px 4px rgba(0, 0, 0, 0.95) !important;
+    /* Forzar color blanco y alta visibilidad para todos los textos principales en el área de contenido */
+    .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6, .stApp p, .stApp span, .stApp label, .stMarkdown {{
+        color: #ffffff !important;
+        text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.9);
     }}
-
-    /* --- MODO CLARO --- */
-    hheader[data-testid="stHeader"] button,
-    [data-testid="stToolbar"] button,
-    [data-testid="stMainMenu"] > button,
-    [data-testid="stBaseButton-headerNoPadding"] {{
-        background: transparent !important;
-        background-color: transparent !important;
-        box-shadow: none !important;
-        border: none !important;
+    div[data-baseweb="select"] {{
+        max-width: 300px;
     }}
-    header[data-testid="stHeader"] button svg,
-    [data-testid="stToolbar"] button svg,
-    [data-testid="stMainMenu"] button svg,
-    [data-testid="stMainMenu"] button circle,
-    [data-testid="stMainMenu"] button path {{
-        color: #0f172a !important;
-        fill: #0f172a !important;
-        stroke: #0f172a !important;
-    }}
-
-    /* Texto oscuro garantizado en selectores, input interno y lista desplegable en modo claro */
-    div[data-baseweb="select"] input,
-    /* 1) Texto visible en Modo de Visualización (tanto en reposo como seleccionado) */
-    div[data-baseweb="select"] div[class*="ValueContainer"],
-    div[data-baseweb="select"] div[class*="ValueContainer"] *,
-    div[data-baseweb="select"] div[class*="singleValue"],
-    div[data-baseweb="select"] input {{
-        color: #111827 !important;
-        -webkit-text-fill-color: #111827 !important;
-        opacity: 1 !important;
-    }}
-
-    /* 2) Quitar el cuadro blanco de los tres puntitos y hacer visibles los puntos */
-    [data-testid="stMainMenu"],
-    [data-testid="stMainMenu"] > div,
-    [data-testid="stMainMenu"] button,
-    header[data-testid="stHeader"] [data-testid="stMainMenu"] button {{
-        background: transparent !important;
-        background-color: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        color: #0f172a !important;
-    }}
-    [data-testid="stMainMenu"] button svg,
-    [data-testid="stMainMenu"] button svg * {{
-        color: #0f172a !important;
-        fill: #0f172a !important;
-        stroke: #0f172a !important;
-        opacity: 1 !important;
-    }}
-    section[data-testid="stSidebar"] div.stCheckbox {{
-        background-color: rgba(255, 255, 255, 0.92);
-        border: 1px solid rgba(15, 23, 42, 0.2);
+    div.stCheckbox {{
+        background-color: rgba(30, 20, 10, 0.75);
+        border: 1px solid rgba(255, 140, 0, 0.4);
         padding: 5px 10px;
         border-radius: 8px;
         margin-bottom: 5px;
     }}
-
-    /* Selectores e inputs en modo claro: fondo claro y texto oscuro bien legible */
-    div[data-baseweb="select"] {{
-        max-width: 320px;
+    div.stCheckbox:hover {{
+        border-color: rgba(255, 140, 0, 0.9);
     }}
-    div[data-baseweb="select"] > div,
-    div[data-baseweb="select"] [data-baseweb="tag"],
-    div[data-baseweb="input"] > div,
-    div[data-testid="stFileUploader"] section,
-    [data-testid="stBaseButton-secondary"] {{
-        background-color: rgba(248, 250, 252, 0.96) !important;
-        border-color: rgba(15, 23, 42, 0.28) !important;
-    }}
-    div[data-baseweb="select"],
-    div[data-baseweb="select"] > div,
-    div[data-baseweb="select"] > div > div,
-    div[data-baseweb="select"] span,
-    div[data-baseweb="select"] svg,
-    div[data-baseweb="input"] input,
-    div[data-testid="stFileUploader"] *,
-    [data-testid="stBaseButton-secondary"] * {{
-        color: #111827 !important;
-        fill: #111827 !important;
-        text-shadow: none !important;
-    }}
-
-    /* --- MODO OSCURO (tono carbón cálido similar a la barra de búsqueda) --- */
-    @media (prefers-color-scheme: dark) {{
-        header[data-testid="stHeader"],
-        [data-testid="stToolbar"],
-        [data-testid="stDecoration"],
-        div[data-testid="stPopoverBody"],
-        ul[role="listbox"] {{
-            background-color: rgba(28, 25, 23, 0.95) !important;
-        }}
-        header[data-testid="stHeader"] *,
-        [data-testid="stToolbar"] *,
-        div[data-testid="stPopoverBody"] *,
-        ul[role="listbox"] * {{
-            color: #f5f5f4 !important;
-            fill: #f5f5f4 !important;
-            text-shadow: none !important;
-        }}
-
-        section[data-testid="stSidebar"] {{
-            background-color: rgba(28, 25, 23, 0.96) !important;
-            border-right: 1px solid rgba(214, 211, 209, 0.18);
-        }}
-        section[data-testid="stSidebar"] * {{
-            color: #f5f5f4 !important;
-            text-shadow: none !important;
-        }}
-        section[data-testid="stSidebar"] div.stCheckbox {{
-            background-color: rgba(41, 37, 36, 0.92);
-            border: 1px solid rgba(214, 211, 209, 0.22);
-        }}
-
-        div[data-baseweb="select"] > div,
-        div[data-baseweb="select"] [data-baseweb="tag"],
-        div[data-baseweb="input"] > div,
-        div[data-testid="stFileUploader"] section,
-        [data-testid="stBaseButton-secondary"] {{
-            background-color: rgba(28, 25, 23, 0.94) !important;
-            border-color: rgba(214, 211, 209, 0.28) !important;
-        }}
-        div[data-baseweb="select"],
-        div[data-baseweb="select"] > div,
-        div[data-baseweb="select"] > div > div,
-        div[data-baseweb="select"] span,
-        div[data-baseweb="select"] svg,
-        div[data-baseweb="input"] input,
-        div[data-testid="stFileUploader"] *,
-        [data-testid="stBaseButton-secondary"] * {{
-            color: #f5f5f4 !important;
-            fill: #f5f5f4 !important;
-            text-shadow: none !important;
-        }}
-    }}
-
-    /* Botones naranjas principales */
     div.stButton > button {{
         background: linear-gradient(135deg, #ff8c00 0%, #ff6600 100%) !important;
-        color: #ffffff !important;
+        color: white !important;
         border: 1px solid #ffa500 !important;
         border-radius: 6px !important;
         font-weight: bold !important;
-        text-shadow: none !important;
     }}
     div.stButton > button:hover {{
         background: linear-gradient(135deg, #ffa500 0%, #ff7f00 100%) !important;
         border-color: #ffb732 !important;
-        color: #ffffff !important;
+        color: white !important;
     }}
     div.stButton > button:disabled {{
-        background: rgba(120, 113, 108, 0.75) !important;
-        border-color: rgba(214, 211, 209, 0.3) !important;
-        color: #e7e5e4 !important;
-        text-shadow: none !important;
+        background: rgba(50, 50, 50, 0.6) !important;
+        border-color: rgba(100, 100, 100, 0.4) !important;
+        color: #aaa !important;
     }}
     </style>
     """
@@ -1110,20 +973,33 @@ if os.path.exists(IMG_FOLDER):
 
         if proximo_lanzamiento:
           str_lit.markdown(
-              f"""<div style="text-align:center;opacity:0.35;margin-bottom:6px;"><div style="position:relative;display:inline-block;width:100px;"><img src="{imagen_a_data_uri(ruta_espiritu)}" width="100" style="border-radius:8px;display:block;">{badge_nuevo_html}</div></div>""",
-              unsafe_allow_html=True,
-          )
-          str_lit.markdown(
-              f"<p style='text-align:center;font-weight:bold;font-size:13px;color:white;margin:2px 0;'>{nombre_mostrado}</p><p style='text-align:center;font-size:11px;color:#aaa;margin:0 0 8px 0;'>🔒 Próximamente</p>",
+              f"""
+              <div style='text-align: center; opacity: 0.35; margin-bottom: 10px;'>
+                  <div style='position: relative; display: inline-block; width: 100px;'>
+                      <img src='{imagen_a_data_uri(ruta_espiritu)}' width='100' style='border-radius: 8px; display: block;'>
+                      {badge_nuevo_html}
+                  </div>
+                  <div style='font-weight: bold; font-size: 13px; color: white;'>{nombre_mostrado}</div>
+                  <div style='font-size: 11px; color: #aaa; margin-top: 2px;'>🔒 Próximamente</div>
+              </div>
+              """,
               unsafe_allow_html=True,
           )
         else:
           str_lit.markdown(
-              f"""<div style="text-align:center;margin-bottom:4px;"><div style="position:relative;display:inline-block;width:100px;"><img src="{imagen_a_data_uri(ruta_espiritu)}" width="100" style="border-radius:8px;display:block;">{badge_nuevo_html}</div></div>""",
+              f"""
+              <div style='text-align: center; margin-bottom: 4px;'>
+                  <div style='position: relative; display: inline-block; width: 100px;'>
+                      <img src='{imagen_a_data_uri(ruta_espiritu)}' width='100' style='border-radius: 8px; display: block;'>
+                      {badge_nuevo_html}
+                  </div>
+              </div>
+              """,
               unsafe_allow_html=True,
           )
           str_lit.markdown(
-              f"<p style='text-align:center;font-weight:bold;font-size:13px;color:white;margin:2px 0 6px 0;'>{nombre_mostrado}</p>",
+              f"<div style='text-align: center; font-weight: bold; font-size:"
+              f" 13px; margin-bottom: 5px; color: white;'>{nombre_mostrado}</div>",
               unsafe_allow_html=True,
           )
 
