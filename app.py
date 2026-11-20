@@ -989,10 +989,6 @@ if os.path.exists(IMG_FOLDER):
               f"<p style='text-align:center;font-weight:bold;font-size:13px;color:white;margin:2px 0 6px 0;'>{nombre_mostrado}</p>",
               unsafe_allow_html=True,
           )
-          str_lit.markdown(
-              f"<p style='text-align:center;font-weight:bold;font-size:13px;color:white;margin:2px 0 6px 0;'>{nombre_mostrado}</p>",
-              unsafe_allow_html=True,
-          )
         else:
           str_lit.markdown(
               f"""
