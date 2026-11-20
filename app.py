@@ -973,16 +973,20 @@ if os.path.exists(IMG_FOLDER):
 
         if proximo_lanzamiento:
           str_lit.markdown(
-              f"""
-              <div style='text-align: center; opacity: 0.35; margin-bottom: 10px;'>
-                  <div style='position: relative; display: inline-block; width: 100px;'>
-                      <img src='{imagen_a_data_uri(ruta_espiritu)}' width='100' style='border-radius: 8px; display: block;'>
-                      {badge_nuevo_html}
-                  </div>
-                  <div style='font-weight: bold; font-size: 13px; color: white; margin-top: 4px;'>{nombre_mostrado}</div>
-                  <div style='font-size: 11px; color: #aaa; margin-top: 2px;'>🔒 Próximamente</div>
-              </div>
-              """,
+              f"""<div style="text-align:center;opacity:0.35;margin-bottom:6px;"><div style="position:relative;display:inline-block;width:100px;"><img src="{imagen_a_data_uri(ruta_espiritu)}" width="100" style="border-radius:8px;display:block;">{badge_nuevo_html}</div></div>""",
+              unsafe_allow_html=True,
+          )
+          str_lit.markdown(
+              f"<p style='text-align:center;font-weight:bold;font-size:13px;color:white;margin:2px 0;'>{nombre_mostrado}</p><p style='text-align:center;font-size:11px;color:#aaa;margin:0 0 8px 0;'>🔒 Próximamente</p>",
+              unsafe_allow_html=True,
+          )
+        else:
+          str_lit.markdown(
+              f"""<div style="text-align:center;margin-bottom:4px;"><div style="position:relative;display:inline-block;width:100px;"><img src="{imagen_a_data_uri(ruta_espiritu)}" width="100" style="border-radius:8px;display:block;">{badge_nuevo_html}</div></div>""",
+              unsafe_allow_html=True,
+          )
+          str_lit.markdown(
+              f"<p style='text-align:center;font-weight:bold;font-size:13px;color:white;margin:2px 0 6px 0;'>{nombre_mostrado}</p>",
               unsafe_allow_html=True,
           )
         else:
