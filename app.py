@@ -55,67 +55,69 @@ if os.path.exists(IMAGEN_FONDO_APP_PATH):
         background-attachment: fixed;
     }}
 
-    /* Área principal: siempre alto contraste sobre el fondo */
-    [data-testid="stAppViewContainer"] > .main h1,
-    [data-testid="stAppViewContainer"] > .main h2,
-    [data-testid="stAppViewContainer"] > .main h3,
-    [data-testid="stAppViewContainer"] > .main h4,
-    [data-testid="stAppViewContainer"] > .main h5,
-    [data-testid="stAppViewContainer"] > .main h6,
-    [data-testid="stAppViewContainer"] > .main p,
-    [data-testid="stAppViewContainer"] > .main label,
-    [data-testid="stAppViewContainer"] > .main [data-testid="stMetricLabel"],
-    [data-testid="stAppViewContainer"] > .main [data-testid="stMetricValue"] {{
-        color: #ffffff !important;
-        text-shadow: 0px 1px 4px rgba(0, 0, 0, 0.95);
+    /* --- MODO CLARO: textos claros legibles sobre el fondo de la app --- */
+    .stApp:not([data-theme="dark"]) [data-testid="stAppViewContainer"] h1,
+    .stApp:not([data-theme="dark"]) [data-testid="stAppViewContainer"] h2,
+    .stApp:not([data-theme="dark"]) [data-testid="stAppViewContainer"] h3,
+    .stApp:not([data-theme="dark"]) [data-testid="stAppViewContainer"] h4,
+    .stApp:not([data-theme="dark"]) [data-testid="stAppViewContainer"] h5,
+    .stApp:not([data-theme="dark"]) [data-testid="stAppViewContainer"] h6,
+    .stApp:not([data-theme="dark"]) [data-testid="stAppViewContainer"] p,
+    .stApp:not([data-theme="dark"]) [data-testid="stAppViewContainer"] label,
+    .stApp:not([data-theme="dark"]) [data-testid="stAppViewContainer"] [data-testid="stMetricLabel"],
+    .stApp:not([data-theme="dark"]) [data-testid="stAppViewContainer"] [data-testid="stMetricValue"] {{
+        color: #f8fafc !important;
+        text-shadow: 0px 1px 4px rgba(0, 0, 0, 0.95) !important;
     }}
 
-    /* --- MODO CLARO (por defecto) --- */
-    header[data-testid="stHeader"],
-    [data-testid="stToolbar"],
-    [data-testid="stDecoration"],
-    div[data-testid="stPopoverBody"],
-    ul[role="listbox"] {{
+    /* Barras claras y controles en modo claro: fondo claro suave con texto oscuro */
+    .stApp:not([data-theme="dark"]) header[data-testid="stHeader"],
+    .stApp:not([data-theme="dark"]) [data-testid="stToolbar"],
+    .stApp:not([data-theme="dark"]) [data-testid="stDecoration"],
+    .stApp:not([data-theme="dark"]) div[data-testid="stPopoverBody"],
+    .stApp:not([data-theme="dark"]) ul[role="listbox"] {{
         background-color: rgba(241, 245, 249, 0.94) !important;
-        color: #0f172a !important;
         backdrop-filter: blur(6px);
     }}
-    header[data-testid="stHeader"] *,
-    [data-testid="stToolbar"] *,
-    div[data-testid="stPopoverBody"] *,
-    ul[role="listbox"] * {{
+    .stApp:not([data-theme="dark"]) header[data-testid="stHeader"] *,
+    .stApp:not([data-theme="dark"]) [data-testid="stToolbar"] *,
+    .stApp:not([data-theme="dark"]) div[data-testid="stPopoverBody"] *,
+    .stApp:not([data-theme="dark"]) ul[role="listbox"] * {{
         color: #0f172a !important;
         text-shadow: none !important;
     }}
 
-    section[data-testid="stSidebar"] {{
+    .stApp:not([data-theme="dark"]) section[data-testid="stSidebar"] {{
         background-color: rgba(241, 245, 249, 0.95) !important;
-        border-right: 1px solid rgba(15, 23, 42, 0.15);
+        border-right: 1px solid rgba(15, 23, 42, 0.16);
     }}
-    section[data-testid="stSidebar"] * {{
+    .stApp:not([data-theme="dark"]) section[data-testid="stSidebar"] * {{
         color: #0f172a !important;
         text-shadow: none !important;
     }}
-    section[data-testid="stSidebar"] div.stCheckbox {{
-        background-color: rgba(255, 255, 255, 0.9);
-        border: 1px solid rgba(15, 23, 42, 0.18);
+    .stApp:not([data-theme="dark"]) section[data-testid="stSidebar"] div.stCheckbox {{
+        background-color: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(15, 23, 42, 0.2);
         padding: 5px 10px;
         border-radius: 8px;
         margin-bottom: 5px;
     }}
 
+    /* Selectores, inputs y botones claros en modo claro con letras oscuras */
     div[data-baseweb="select"] {{
         max-width: 320px;
     }}
-    div[data-baseweb="select"] > div,
-    div[data-baseweb="input"] > div,
-    div[data-testid="stFileUploader"] section {{
-        background-color: rgba(248, 250, 252, 0.94) !important;
+    .stApp:not([data-theme="dark"]) div[data-baseweb="select"] > div,
+    .stApp:not([data-theme="dark"]) div[data-baseweb="input"] > div,
+    .stApp:not([data-theme="dark"]) div[data-testid="stFileUploader"] section,
+    .stApp:not([data-theme="dark"]) [data-testid="stBaseButton-secondary"] {{
+        background-color: rgba(248, 250, 252, 0.95) !important;
         border-color: rgba(15, 23, 42, 0.25) !important;
     }}
-    div[data-baseweb="select"] *,
-    div[data-baseweb="input"] input,
-    div[data-testid="stFileUploader"] * {{
+    .stApp:not([data-theme="dark"]) div[data-baseweb="select"] *,
+    .stApp:not([data-theme="dark"]) div[data-baseweb="input"] input,
+    .stApp:not([data-theme="dark"]) div[data-testid="stFileUploader"] *,
+    .stApp:not([data-theme="dark"]) [data-testid="stBaseButton-secondary"] * {{
         color: #0f172a !important;
         text-shadow: none !important;
     }}
@@ -128,7 +130,6 @@ if os.path.exists(IMAGEN_FONDO_APP_PATH):
         div[data-testid="stPopoverBody"],
         ul[role="listbox"] {{
             background-color: rgba(15, 23, 42, 0.94) !important;
-            color: #f8fafc !important;
         }}
         header[data-testid="stHeader"] *,
         [data-testid="stToolbar"] *,
@@ -165,7 +166,7 @@ if os.path.exists(IMAGEN_FONDO_APP_PATH):
         }}
     }}
 
-    /* Botones de acción (iguales en ambos modos) */
+    /* Botones naranjas principales */
     div.stButton > button {{
         background: linear-gradient(135deg, #ff8c00 0%, #ff6600 100%) !important;
         color: #ffffff !important;
