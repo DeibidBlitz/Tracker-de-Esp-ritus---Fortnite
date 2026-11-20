@@ -48,14 +48,29 @@ if os.path.exists(IMAGEN_FONDO_APP_PATH):
   custom_css = f"""
     <style>
     .stApp {{
-        background-image: linear-gradient(rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.72)), url("data:image/webp;base64,{encoded_bg}");
+        background-image: linear-gradient(rgba(0, 0, 0, 0.76), rgba(0, 0, 0, 0.76)), url("data:image/webp;base64,{encoded_bg}");
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
         background-attachment: fixed;
     }}
 
-    /* Barra superior y menú de opciones (tres puntos, Share, System/Light/Dark) */
+    /* Área principal: siempre alto contraste sobre el fondo */
+    [data-testid="stAppViewContainer"] > .main h1,
+    [data-testid="stAppViewContainer"] > .main h2,
+    [data-testid="stAppViewContainer"] > .main h3,
+    [data-testid="stAppViewContainer"] > .main h4,
+    [data-testid="stAppViewContainer"] > .main h5,
+    [data-testid="stAppViewContainer"] > .main h6,
+    [data-testid="stAppViewContainer"] > .main p,
+    [data-testid="stAppViewContainer"] > .main label,
+    [data-testid="stAppViewContainer"] > .main [data-testid="stMetricLabel"],
+    [data-testid="stAppViewContainer"] > .main [data-testid="stMetricValue"] {{
+        color: #ffffff !important;
+        text-shadow: 0px 1px 4px rgba(0, 0, 0, 0.95);
+    }}
+
+    /* --- MODO CLARO (por defecto) --- */
     header[data-testid="stHeader"],
     [data-testid="stToolbar"],
     [data-testid="stDecoration"],
@@ -73,30 +88,22 @@ if os.path.exists(IMAGEN_FONDO_APP_PATH):
         text-shadow: none !important;
     }}
 
-    /* Barra lateral en tono claro suave con texto oscuro legible */
     section[data-testid="stSidebar"] {{
         background-color: rgba(241, 245, 249, 0.95) !important;
         border-right: 1px solid rgba(15, 23, 42, 0.15);
     }}
-    section[data-testid="stSidebar"] h1,
-    section[data-testid="stSidebar"] h2,
-    section[data-testid="stSidebar"] h3,
-    section[data-testid="stSidebar"] p,
-    section[data-testid="stSidebar"] span,
-    section[data-testid="stSidebar"] label,
-    section[data-testid="stSidebar"] .stMarkdown {{
+    section[data-testid="stSidebar"] * {{
         color: #0f172a !important;
         text-shadow: none !important;
     }}
     section[data-testid="stSidebar"] div.stCheckbox {{
-        background-color: rgba(255, 255, 255, 0.88);
+        background-color: rgba(255, 255, 255, 0.9);
         border: 1px solid rgba(15, 23, 42, 0.18);
         padding: 5px 10px;
         border-radius: 8px;
         margin-bottom: 5px;
     }}
 
-    /* Cajas de selección y campos de texto en tono claro con texto oscuro */
     div[data-baseweb="select"] {{
         max-width: 320px;
     }}
@@ -104,7 +111,6 @@ if os.path.exists(IMAGEN_FONDO_APP_PATH):
     div[data-baseweb="input"] > div,
     div[data-testid="stFileUploader"] section {{
         background-color: rgba(248, 250, 252, 0.94) !important;
-        color: #0f172a !important;
         border-color: rgba(15, 23, 42, 0.25) !important;
     }}
     div[data-baseweb="select"] *,
@@ -114,22 +120,52 @@ if os.path.exists(IMAGEN_FONDO_APP_PATH):
         text-shadow: none !important;
     }}
 
-    /* Área principal sobre el fondo oscuro: texto blanco nítido */
-    section.main h1,
-    section.main h2,
-    section.main h3,
-    section.main h4,
-    section.main h5,
-    section.main h6,
-    section.main p,
-    section.main label,
-    section.main [data-testid="stMetricLabel"],
-    section.main [data-testid="stMetricValue"] {{
-        color: #ffffff !important;
-        text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.9);
+    /* --- MODO OSCURO --- */
+    @media (prefers-color-scheme: dark) {{
+        header[data-testid="stHeader"],
+        [data-testid="stToolbar"],
+        [data-testid="stDecoration"],
+        div[data-testid="stPopoverBody"],
+        ul[role="listbox"] {{
+            background-color: rgba(15, 23, 42, 0.94) !important;
+            color: #f8fafc !important;
+        }}
+        header[data-testid="stHeader"] *,
+        [data-testid="stToolbar"] *,
+        div[data-testid="stPopoverBody"] *,
+        ul[role="listbox"] * {{
+            color: #f8fafc !important;
+            text-shadow: none !important;
+        }}
+
+        section[data-testid="stSidebar"] {{
+            background-color: rgba(15, 23, 42, 0.95) !important;
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }}
+        section[data-testid="stSidebar"] * {{
+            color: #f8fafc !important;
+            text-shadow: none !important;
+        }}
+        section[data-testid="stSidebar"] div.stCheckbox {{
+            background-color: rgba(30, 41, 59, 0.9);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+        }}
+
+        div[data-baseweb="select"] > div,
+        div[data-baseweb="input"] > div,
+        div[data-testid="stFileUploader"] section {{
+            background-color: rgba(15, 23, 42, 0.92) !important;
+            border-color: rgba(148, 163, 184, 0.3) !important;
+        }}
+        div[data-baseweb="select"] *,
+        div[data-baseweb="input"] input,
+        div[data-testid="stFileUploader"] * {{
+            color: #f8fafc !important;
+            text-shadow: none !important;
+        }}
     }}
 
-    /* Botones de acción */
+    /* Botones de acción (iguales en ambos modos) */
     div.stButton > button {{
         background: linear-gradient(135deg, #ff8c00 0%, #ff6600 100%) !important;
         color: #ffffff !important;
@@ -144,9 +180,9 @@ if os.path.exists(IMAGEN_FONDO_APP_PATH):
         color: #ffffff !important;
     }}
     div.stButton > button:disabled {{
-        background: rgba(226, 232, 240, 0.9) !important;
-        border-color: rgba(15, 23, 42, 0.2) !important;
-        color: #475569 !important;
+        background: rgba(100, 116, 139, 0.75) !important;
+        border-color: rgba(148, 163, 184, 0.35) !important;
+        color: #e2e8f0 !important;
         text-shadow: none !important;
     }}
     </style>
