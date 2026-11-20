@@ -1,4 +1,5 @@
 from itertools import groupby
+import base64
 import io
 import os
 from PIL import Image, ImageDraw, ImageFont
@@ -31,12 +32,15 @@ IMAGEN_FONDO_VARIANTE_PATH = os.path.join(IMG_FOLDER, "fondo_variante.png")
 CHECK_ICON_PATH = os.path.join(IMG_FOLDER, "check_verde.png")
 CORONA_ICON_PATH = os.path.join(IMG_FOLDER, "corona.png")
 TOKEN_ICON_PATH = os.path.join(IMG_FOLDER, "token_pirata.png")
+NUEVO_ICON_PATH = os.path.join(IMG_FOLDER, "signo_exclamacion_vector.png")
 LINKTREE_URL = "https://linktr.ee/deibid_blitz"
+
+# --- LISTA INTERNA DE ESPÍRITUS NUEVOS ---
+CATEGORIAS_NUEVAS = {"calamarin", "mini miku", "sir oscar", "impulso cero"}
+VARIANTES_NUEVAS = {"dorado"}
 
 # --- ESTILOS CSS Y FONDO DE LA APP (CON CONTRASTE MEJORADO PARA TEXTOS) ---
 if os.path.exists(IMAGEN_FONDO_APP_PATH):
-  import base64
-
   with open(IMAGEN_FONDO_APP_PATH, "rb") as f:
     data = f.read()
   encoded_bg = base64.b64encode(data).decode()
@@ -156,6 +160,34 @@ def obtener_titulo_categoria(nombre_archivo):
 def obtener_variante(nombre_archivo):
   _, var = obtener_datos_archivo(nombre_archivo)
   return var
+
+
+def es_espiritu_nuevo(nombre_archivo):
+  """Indica si el espíritu pertenece a una categoría o variante marcada como nueva."""
+  cat, var = obtener_datos_archivo(nombre_archivo)
+  return cat.lower() in CATEGORIAS_NUEVAS or var.lower() in VARIANTES_NUEVAS
+
+
+def obtener_icono_nuevo_redimensionado(factor=0.07, tamano_max=22, tamano_min=14):
+  """Carga y redimensiona el ícono de nuevo al 7% del original con límites de legibilidad."""
+  if not os.path.exists(NUEVO_ICON_PATH):
+    return None
+  try:
+    img = Image.open(NUEVO_ICON_PATH).convert("RGBA")
+    nuevo_w = max(tamano_min, min(tamano_max, int(round(img.width * factor))))
+    nuevo_h = max(tamano_min, min(tamano_max, int(round(img.height * factor))))
+    return img.resize((nuevo_w, nuevo_h), Image.Resampling.LANCZOS)
+  except Exception as e:
+    print(f"Error cargando ícono de nuevo: {e}")
+    return None
+
+
+def imagen_a_data_uri(ruta_imagen):
+  with open(ruta_imagen, "rb") as f:
+    b64 = base64.b64encode(f.read()).decode()
+  ext = os.path.splitext(ruta_imagen)[1].lower().lstrip(".")
+  mime = "jpeg" if ext == "jpg" else (ext or "png")
+  return f"data:image/{mime};base64,{b64}"
 
 
 def obtener_nombre_limpio(nombre_base):
@@ -464,6 +496,7 @@ def generar_imagen_coleccion(
       if os.path.exists(CORONA_ICON_PATH)
       else None
   )
+  img_nuevo = obtener_icono_nuevo_redimensionado(factor=0.07, tamano_max=20, tamano_min=14)
 
   for i, archivo in enumerate(lista_ordenada_archivos):
     ruta = os.path.join(IMG_FOLDER, archivo)
@@ -471,6 +504,15 @@ def generar_imagen_coleccion(
     x = padding_lateral + (i % columnas) * ancho_celda + 10
     y = padding_superior + (i // columnas) * alto_celda + 10
     img_final.paste(img_espiritu, (x, y), img_espiritu)
+
+    if es_espiritu_nuevo(archivo):
+      if img_nuevo:
+        pos_nuevo_x = x + 70 - img_nuevo.width + 2
+        pos_nuevo_y = y - 3
+        img_final.paste(img_nuevo, (pos_nuevo_x, pos_nuevo_y), img_nuevo)
+      else:
+        d.ellipse([x + 56, y - 2, x + 72, y + 14], fill=(255, 220, 0, 255), outline=(0, 0, 0, 255))
+        d.text((x + 62, y), "!", fill=(0, 0, 0, 255))
 
     if mostrar_marcas:
       nombre_base = limpiar_nombre_archivo(archivo)
@@ -508,6 +550,7 @@ if os.path.exists(IMG_FOLDER):
       "check_verde.png",
       "corona.png",
       "token_pirata.png",
+      "signo_exclamacion_vector.png",
       "fondo_app.png",
       "fondo_catalogo.png",
       "fondo_categoria.png",
@@ -520,7 +563,7 @@ if os.path.exists(IMG_FOLDER):
       and not f.startswith("num_")
       and not f.lower().startswith("fondo_")
       and f.lower() not in archivos_ignorar
-    ], key=lambda f: (extraer_numero_orden(f), f))
+  ], key=extraer_numero_orden)
   
   archivos_ordenados = list(archivos_crudos)
   
@@ -897,10 +940,6 @@ if os.path.exists(IMG_FOLDER):
         f for f in archivos_ordenados if obtener_variante(f) == var_seleccionada_principal
     ]
 
-  if busqueda_texto.strip():
-    archivos_fuente = archivos_ordenados
-    str_lit.caption("Buscando en toda la coleccion, no solo en la categoria/variante seleccionada.")
-
   grupo_filtrado = []
   for archivo in archivos_fuente:
     nombre_base = limpiar_nombre_archivo(archivo)
@@ -923,11 +962,23 @@ if os.path.exists(IMG_FOLDER):
       proximo_lanzamiento = es_proximo(archivo)
 
       with cols[i % 5]:
+        ruta_espiritu = os.path.join(IMG_FOLDER, archivo)
+        es_nuevo = es_espiritu_nuevo(archivo)
+        badge_nuevo_html = ""
+        if es_nuevo and os.path.exists(NUEVO_ICON_PATH):
+          badge_nuevo_html = (
+              f"<img src='{imagen_a_data_uri(NUEVO_ICON_PATH)}' "
+              "style='position: absolute; top: -4px; right: -4px; width: 18px; height: 18px; object-fit: contain; pointer-events: none;'>"
+          )
+
         if proximo_lanzamiento:
           str_lit.markdown(
               f"""
               <div style='text-align: center; opacity: 0.35; margin-bottom: 10px;'>
-                  <img src='app/static/{IMG_FOLDER}/{archivo}' width='100' style='border-radius: 8px;'>
+                  <div style='position: relative; display: inline-block; width: 100px;'>
+                      <img src='{imagen_a_data_uri(ruta_espiritu)}' width='100' style='border-radius: 8px; display: block;'>
+                      {badge_nuevo_html}
+                  </div>
                   <div style='font-weight: bold; font-size: 13px; color: white;'>{nombre_mostrado}</div>
                   <div style='font-size: 11px; color: #aaa; margin-top: 2px;'>🔒 Próximamente</div>
               </div>
@@ -935,7 +986,17 @@ if os.path.exists(IMG_FOLDER):
               unsafe_allow_html=True,
           )
         else:
-          str_lit.image(f"{IMG_FOLDER}/{archivo}", width=100)
+          str_lit.markdown(
+              f"""
+              <div style='text-align: center; margin-bottom: 4px;'>
+                  <div style='position: relative; display: inline-block; width: 100px;'>
+                      <img src='{imagen_a_data_uri(ruta_espiritu)}' width='100' style='border-radius: 8px; display: block;'>
+                      {badge_nuevo_html}
+                  </div>
+              </div>
+              """,
+              unsafe_allow_html=True,
+          )
           str_lit.markdown(
               f"<div style='text-align: center; font-weight: bold; font-size:"
               f" 13px; margin-bottom: 5px; color: white;'>{nombre_mostrado}</div>",
