@@ -71,19 +71,32 @@ if os.path.exists(IMAGEN_FONDO_APP_PATH):
     }}
 
     /* --- MODO CLARO --- */
-    header[data-testid="stHeader"],
-    [data-testid="stToolbar"],
-    [data-testid="stDecoration"],
-    div[data-testid="stPopoverBody"],
-    ul[role="listbox"] {{
-        background-color: rgba(241, 245, 249, 0.94) !important;
-        backdrop-filter: blur(6px);
+    hheader[data-testid="stHeader"] button,
+    [data-testid="stToolbar"] button,
+    [data-testid="stMainMenu"] > button,
+    [data-testid="stBaseButton-headerNoPadding"] {{
+        background: transparent !important;
+        background-color: transparent !important;
+        box-shadow: none !important;
+        border: none !important;
     }}
-    header[data-testid="stHeader"] *,
-    [data-testid="stToolbar"] *,
-    div[data-testid="stPopoverBody"] *,
-    ul[role="listbox"] * {{
+    header[data-testid="stHeader"] button svg,
+    [data-testid="stToolbar"] button svg,
+    [data-testid="stMainMenu"] button svg,
+    [data-testid="stMainMenu"] button circle,
+    [data-testid="stMainMenu"] button path {{
         color: #0f172a !important;
+        fill: #0f172a !important;
+        stroke: #0f172a !important;
+    }}
+
+    /* Texto oscuro garantizado en selectores, input interno y lista desplegable en modo claro */
+    div[data-baseweb="select"] input,
+    div[data-baseweb="select"] [aria-selected="true"],
+    ul[role="listbox"] li,
+    ul[role="listbox"] li * {{
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
         text-shadow: none !important;
     }}
 
